@@ -7,4 +7,30 @@ Our design flow can be found in the Nets2130Flow.drawio.png file
 
 We start with the starting image. The workers then give a suggestion to change the image. An ai generated image is then put into an image dataset. Then these images are then brought back to the workers to vote on. Finally the final image is sent back to the start of the flow for the next day. 
 
+# Major Components
+QC Module: 5 points
+- Ensure that all user-submitted prompts and AI-generated images align with the project's goals.
+- Flag inappropriate prompts.
+- Voting system for choosing best change to make.
+ 
+Aggregation Module: 5 points
+- Compile crowd contributions and determine the "winning" image of the day based on voting results, creating a single image that best represents the collective effort.
+- Potentially using weighted voting for users who consistently participate or give prompts that lead to popular images.
+
+Image Generation Module: 3 points
+- Generated updated images based on user prompts.
+
+UI: 5 points
+Home page- 
+- Display current image
+- Include instructions
+- Prompt submission
+
+Voting page-
+- Display gallery of generated changes and allow users to vote on their favorites.
+
+Results/History
+- See the current image as well as the history of changes that the crowd has made over time.
+
+
 
