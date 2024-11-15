@@ -32,5 +32,26 @@ Voting page-
 Results/History
 - See the current image as well as the history of changes that the crowd has made over time.
 
+# Milestone 1: Deliverable 2 Item Locations
+
+Raw data
+- Raw data can be found in at /data folder of this project.
+- For the purposes of this project, the raw data is a set of images.
+
+Sample input/output for QC
+- Input data is found in our /data file, as mentioned above.
+- Output data (where votes are tallied) in local storage.
+
+Sample input/output for aggregation
+- Both sample input and output data can be found in the /src/aggregation.
+- In this folder, there is a sample input and output image.
+
+Code for QC
+- Code for the QC module can be found in the /src/qc folder.
+
+Code for aggregation
+- Code for the QC module can be found in the /src/aggregation folder.
+- the script /src/aggregation/aggregation.py is the code for aggregation.
+
 
 
