@@ -18,6 +18,7 @@ def generate_image(prompt, output_path, size="1024x1024", n=1):
     """
     try:
         # Set OpenAI API key
+
         if not openai.api_key:
             raise ValueError("API key not found. Please set the OPENAI_API_KEY environment variable.")
 
