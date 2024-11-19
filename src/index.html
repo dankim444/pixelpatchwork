@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quality Control - Image Voting</title>
+    <title>Generate and Vote for Images</title>
 
-    <link rel="stylesheet" href="qualityControl.css">
+    <link rel="stylesheet" href="index.css">
 </head>
 
 
@@ -15,7 +15,7 @@
         </div id="imageGenerator">
             <h1>Generate a New Image</h>
             <img 
-            src="../../data/test.png" 
+            src="../data/test.png" 
             alt="Image description" 
             style="display: block; margin: 1rem auto; width: 400px; height: auto;"
             />
@@ -30,12 +30,13 @@
                 <button type="submit">Generate Image</button>
             </form>
         </div>
+        <div></div>
         <h1>Vote for your favorite images!</h1>
         <h3>Feel free to select more than one. Downvote any you feel are innappropriate.</h3>
         <div id="imageContainer" class="image-grid"></div>
     </div>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js"></script>
-    <script src="qualityControl.js"></script>
+    <script src="index.js"></script>
 </body>
 </html>
