@@ -106,54 +106,5 @@ def generate_image_endpoint():
         return jsonify({'error': 'Failed to generate image'}), 500
 
 
-@app.route('/submit-image', methods=['POST'])
-def submit_image():
-    data = request.get_json()
-    image_id = data.get('image_id')
-    s3_path = data.get('s3_path')
-    prompt_text = data.get('prompt_text')
-    creator_id = data.get('creator_id', 'default_user') # Replace with actual user authentication later
-    day = data.get('day')
-
-    # validate required fields
-    if not (image_id and s3_path and prompt_text and day):
-        logging.warning("Missing required fields in /submit-image request")
-        return jsonify({'error': 'Missing required fields'}), 400
-
-    try:
-        # connect to db
-        db_conn = get_db_connection()
-        cursor = db_conn.cursor()
-
-        # insert the image data into the Image table
-        cursor.execute("""
-            INSERT INTO Image (
-                image_id, 
-                s3_path, 
-                prompt_text, 
-                creator_id,
-                day,
-                upvotes,
-                downvotes,
-                flags
-            ) VALUES (%s, %s, %s, %s, %s, 0, 0, 0)
-        """, (image_id, s3_path, prompt_text, creator_id, day))
-        db_conn.commit()
-
-        logging.info(
-            f"Image {image_id} successfully submitted to the database")
-        return jsonify({'message': 'Image submitted successfully'}), 200
-
-    except Exception as e:
-        logging.error(f"Error in /submit-image: {e}")
-        return jsonify({'error': 'Failed to submit image'}), 500
-
-    finally:
-        if 'cursor' in locals() and cursor:
-            cursor.close()
-        if 'db_conn' in locals() and db_conn:
-            db_conn.close()
-
-
 if __name__ == '__main__':
     app.run(debug=True)
