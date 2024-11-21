@@ -10,7 +10,7 @@
     <div class="container">
         <div id="image-generator">
             <h1>Generate a New Image</h1>
-            <!-- This image will be replaced dynamically -->
+            <h3>Please avoid generating more than 3 times. You may have to wait a few moments.</h3>
             <img 
                 id="generated-image"
                 src="{{ url_for('static', filename='data/seed_image.jpg') }}" 
@@ -44,9 +44,20 @@
             day: new Date().toISOString().split('T')[0] // today's date
         };
 
+        // track how many times the 'Generate Image' button has been pressed
+        let generateCount = parseInt(localStorage.getItem('generateCount')) || 0;
+        const maxGenerates = 3;
+
         // generate image
         document.getElementById('generate-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            // check if the user has exceeded the generate limit
+            if (generateCount >= maxGenerates) {
+                alert('You have reached the maximum number of image generations (3).');
+                return;
+            }
+
             const prompt = document.getElementById('prompt').value;
 
             try {
@@ -71,6 +82,9 @@
                         prompt_text: prompt,
                         day: new Date().toISOString().split('T')[0]
                     };
+
+                    generateCount++; // increment count
+                    localStorage.setItem('generateCount', generateCount);
                 } else {
                     console.log('error', data.error)
                     alert(data.error || 'Failed to generate image.');
@@ -88,25 +102,8 @@
                 return;
             }
 
-            try {
-                const response = await fetch('/submit-image', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(currentImage)
-                });
-
-                const data = await response.json();
-                if (response.ok) {
-                    window.location.href = '/vote';
-                } else {
-                    alert(data.error || 'Failed to submit the image.');
-                }
-            } catch (error) {
-                console.error('Error submitting image:', error);
-                alert('An error occurred while submitting the image.');
-            }
+            // redirect to the next page
+            window.location.href = '/vote';
         });
     </script>
 </body>
