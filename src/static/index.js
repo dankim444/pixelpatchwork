@@ -2,11 +2,9 @@ class ImageDataService {
   constructor() {
     // images to display to user
     this.staticImages = [
-      { id: "image1", url: "../data/starter_image.png", votes: 0 }, // need a way to aggregate total votes
-      { id: "image2", url: "../data/starter_image.png", votes: 0 },
-      { id: "image3", url: "../data/starter_image.png", votes: 0 },
-      { id: "image4", url: "../data/starter_image.png", votes: 0 },
-      { id: "image5", url: "../data/starter_image.png", votes: 0 },
+      { id: "image1", url: "https://pixelspatchwork.s3.amazonaws.com/daily-submissions/2024-11-21/84213b2a-5c78-4c7d-9155-226c853a24b5.png", votes: 0 },
+      { id: "image2", url: "https://pixelspatchwork.s3.amazonaws.com/daily-submissions/2024-11-21/61962ad2-01ed-4e92-8fc3-006a3dd83510.png", votes: 0 },
+      { id: "image3", url: "https://pixelspatchwork.s3.amazonaws.com/daily-submissions/2024-11-21/5d1e91b9-91e7-457b-9467-d52f4f97ac2e.png", votes: 0 },
     ];
   }
 
