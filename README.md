@@ -7,7 +7,7 @@ To get started with the project, follow these steps:
 3. **Activate virtual environment**: source venv/bin/activate (for mac); .\venv\Scripts\activate (on windows)
 4. **Install required packages**: pip install -r requirements.txt
 5. **Set Up Environment Variables**: Create a .env file in the root directory of the project and add the necessary environment variables. You can use the .env.example file as a template.
-6. **Run the Flask app**: Use the command `python3 server/app.py` to start the Flask application.
+6. **Run the Flask app**: Use the command `python3 src/app.py` to start the Flask application.
 
 # Project Overview
 
@@ -55,23 +55,23 @@ Results/History
 
 Raw data
 
-- Raw data can be found in the /server/static/data folder of this project.
+- Raw data can be found in the /src/static/data folder of this project.
 - For the purposes of this project, the raw data is a set of images.
 
 Sample input/output for QC
 
-- Input data is found in our /server/static/data folder, as mentioned above.
+- Input data is found in our /src/static/data folder, as mentioned above.
 - Output data (where votes are tallied) in local storage.
 
 Sample input/output for aggregation
 
-- Both sample input and output data can be found in the /server/static/docs folder.
+- Both sample input and output data can be found in the /src/static/docs folder.
 - In this folder, there is a sample input and output image.
 
 Code for QC
 
-- Code for the QC module can be found in the /server/templates and /server/static folders.
+- Code for the QC module can be found in the /src/templates and /src/static folders.
 
 Code for aggregation
 
-- Code for the aggregation module can be found in the /server/aggregation.py script.
+- Code for the aggregation module can be found in the /src/aggregation.py script.
