@@ -7,7 +7,7 @@ import requests
 import boto3
 import mysql.connector
 from datetime import datetime
-from config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, OPENAI_API_KEY, RDS_HOST, RDS_PORT, RDS_DATABASE, RDS_USERNAME, RDS_PASSWORD, validate_env
+from config import *
 
 # Set your API key
 #Note: PLEASE DO NOT RUN THIS MORE THAN ONCE OR TWICE, IT COST LIKE 0.02 cents every time it runs
