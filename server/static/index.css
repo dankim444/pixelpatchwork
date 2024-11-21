@@ -155,19 +155,19 @@ h3 {
     }
 }
 
-#imageGenerator {
+#image-generator {
     margin: 2rem 0;
     text-align: center;
 }
 
-#imageForm {
+#generate-form {
     display: flex;
     justify-content: center;
     gap: 1rem;
     margin-bottom: 1rem;
 }
 
-#imagePrompt {
+#prompt {
     width: 70%;
     padding: 0.8rem;
     font-size: 1rem;

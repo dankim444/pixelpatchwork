@@ -1,0 +1,8 @@
+.env
+*.env
+.aws/
+__pycache__/
+*.pyc
+data/
+venv/
+

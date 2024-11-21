@@ -2,11 +2,11 @@ class ImageDataService {
   constructor() {
     // images to display to user
     this.staticImages = [
-      { id: "image1", url: "../data/image1.jpg", votes: 0 }, // need a way to aggregate total votes
-      { id: "image2", url: "../data/image2.jpg", votes: 0 },
-      { id: "image3", url: "../data/image3.jpg", votes: 0 },
-      { id: "image4", url: "../data/image4.jpg", votes: 0 },
-      { id: "image5", url: "../data/image5.jpg", votes: 0 },
+      { id: "image1", url: "../data/starter_image.png", votes: 0 }, // need a way to aggregate total votes
+      { id: "image2", url: "../data/starter_image.png", votes: 0 },
+      { id: "image3", url: "../data/starter_image.png", votes: 0 },
+      { id: "image4", url: "../data/starter_image.png", votes: 0 },
+      { id: "image5", url: "../data/starter_image.png", votes: 0 },
     ];
   }
 
@@ -136,8 +136,6 @@ class ImageVotingSystem {
     this.updateVote();
   }
 }
-
-
 
 document.addEventListener("DOMContentLoaded", () => {
   new ImageVotingSystem();

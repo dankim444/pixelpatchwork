@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PixelPatchwork</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to PixelPatchwork</h1>
+        <h3>Use this app to generate unique images and vote for your favorites. Click the button below to get started.</h3>
+        <form action="{{ url_for('generate') }}" method="get">
+            <button 
+                type="submit" 
+                style="display: block; margin: 1rem auto;"
+            >
+                Begin
+            </button>
+        </form>
+    </div>
+</body>
+</html>

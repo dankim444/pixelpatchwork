@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate a New Image</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div id="image-generator">
+            <h1>Generate a New Image</h1>
+            <!-- This image will be replaced dynamically -->
+            <img 
+                id="generated-image"
+                src="{{ url_for('static', filename='data/seed_image.jpg') }}" 
+                alt="Generated Image" 
+                style="display: block; margin: 1rem auto; width: 400px; height: auto;"
+            />
+            <form id="generate-form">
+                <input 
+                    type="text" 
+                    id="prompt" 
+                    placeholder="Enter a prompt for the AI to generate an image" 
+                    required
+                />
+                <button type="submit">Generate Image</button>
+            </form>
+            <button 
+                id="submit-button"
+                type="submit"
+                style="display: block; margin: 1rem auto;"
+            >
+                Submit
+            </button>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='index.js') }}"></script>
+    <script>
+        let currentImage = {
+            image_id: null,
+            s3_path: null,
+            prompt_text: null,
+            day: new Date().toISOString().split('T')[0] // today's date
+        };
+
+        // generate image
+        document.getElementById('generate-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const prompt = document.getElementById('prompt').value;
+
+            try {
+                const response = await fetch('/generate-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ prompt })
+                });
+                
+                const data = await response.json();
+                if (data.imageUrl) {
+                    // update the image src
+                    const imageElement = document.getElementById('generated-image');
+                    imageElement.src = data.imageUrl; // update image element
+
+                    // update current image data
+                    currentImage = {
+                        image_id: data.image_id,
+                        s3_path: data.imageUrl.split('.com/')[1],
+                        prompt_text: prompt,
+                        day: new Date().toISOString().split('T')[0]
+                    };
+                } else {
+                    console.log('error', data.error)
+                    alert(data.error || 'Failed to generate image.');
+                }
+            } catch (error) {
+                console.error('Error generating image:', error);
+                alert('An error occurred while generating the image.');
+            }
+        });
+
+        // submit image
+        document.getElementById('submit-button').addEventListener('click', async () => {
+            if (!currentImage.image_id || !currentImage.s3_path) {
+                alert('Please generate an image before submitting.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/submit-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(currentImage)
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    window.location.href = '/vote';
+                } else {
+                    alert(data.error || 'Failed to submit the image.');
+                }
+            } catch (error) {
+                console.error('Error submitting image:', error);
+                alert('An error occurred while submitting the image.');
+            }
+        });
+    </script>
+</body>
+</html>
