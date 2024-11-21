@@ -5,11 +5,22 @@ sys.path.append(str(Path(__file__).parent.parent))
 import openai
 import requests
 import boto3
+import mysql.connector
 from datetime import datetime
-from config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, OPENAI_API_KEY, validate_env
+from config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, OPENAI_API_KEY, RDS_HOST, RDS_PORT, RDS_DATABASE, RDS_USERNAME, RDS_PASSWORD, validate_env
 
 # Set your API key
 #Note: PLEASE DO NOT RUN THIS MORE THAN ONCE OR TWICE, IT COST LIKE 0.02 cents every time it runs
+
+def get_db_connection():
+    """Create a connection to the RDS database"""
+    return mysql.connector.connect(
+        host=RDS_HOST,
+        port=RDS_PORT,
+        database=RDS_DATABASE,
+        user=RDS_USERNAME,
+        password=RDS_PASSWORD
+    )
 
 def generate_image(prompt, size="1024x1024", n=1):
     """
@@ -35,6 +46,18 @@ def generate_image(prompt, size="1024x1024", n=1):
         )
         bucket_name = 'pixelspatchwork'
 
+        # Get database connection
+        db_conn = get_db_connection()
+        cursor = db_conn.cursor()
+
+        # Make sure we have a Day record for today
+        today = datetime.now().strftime('%Y-%m-%d')
+        cursor.execute("""
+            INSERT IGNORE INTO Day (date, total_votes, total_participants, is_current)
+            VALUES (%s, 0, 0, TRUE)
+        """, (today,))
+        db_conn.commit()
+
         # Call OpenAI's Image Generation API
         response = openai.Image.create(
             prompt=prompt,
@@ -45,9 +68,6 @@ def generate_image(prompt, size="1024x1024", n=1):
 
         # Extract image URLs from the response
         image_urls = [data['url'] for data in response['data']]
-
-        # Get current date for S3 folder
-        today = datetime.now().strftime('%Y-%m-%d')
         uploaded_images = []
 
         # Download and save each image
@@ -69,20 +89,55 @@ def generate_image(prompt, size="1024x1024", n=1):
                         Body=image_response.content,
                         ContentType='image/png'
                     )
+
+                    # Insert into database
+                    cursor.execute("""
+                        INSERT INTO Image (
+                            image_id, 
+                            s3_path, 
+                            prompt_text, 
+                            creator_id,
+                            day,
+                            upvotes,
+                            downvotes,
+                            flags
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (
+                        image_id,
+                        s3_path,
+                        prompt,
+                        'default_user',  # Placeholder user ID
+                        today,
+                        0,  # Initial upvotes
+                        0,  # Initial downvotes
+                        0   # Initial flags
+                    ))
+                    db_conn.commit()
+
                     uploaded_images.append((image_id, s3_path))
-                    print(f"Image {idx+1} uploaded to s3://{bucket_name}/{s3_path}")
+                    print(f"Image {idx+1} uploaded to s3://{bucket_name}/{s3_path} and saved to database")
                 except Exception as e:
                     print(f"Failed to upload to S3: {e}")
             else:
                 print(f"Failed to download image {idx+1}. Status Code: {image_response.status_code}")
+
         return uploaded_images
 
     except openai.error.OpenAIError as e:
         print(f"An OpenAI error occurred: {e}")
         return []
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+    except mysql.connector.Error as e:
+        print(f"Database error occurred: {e}")
         return []
+    except Exception as e:
+        print(f"Failed to upload to S3 or database: {e}")
+        db_conn.rollback()
+        return []
+    finally:
+        if 'cursor' in locals() and cursor:
+            cursor.close()
+        if 'db_conn' in locals() and db_conn:
+            db_conn.close()
 
 if __name__ == "__main__":
     # Define your prompt and output path
