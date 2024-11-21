@@ -22,6 +22,17 @@ CORS(app)
 bucket_name = 'pixelspatchwork'
 
 
+def get_db_connection():
+    """Create a connection to the RDS database"""
+    return mysql.connector.connect(
+        host=RDS_HOST,
+        port=RDS_PORT,
+        database=RDS_DATABASE,
+        user=RDS_USERNAME,
+        password=RDS_PASSWORD
+    )
+
+
 @app.route('/')
 def test():
     return render_template('index.html')
@@ -49,10 +60,13 @@ def generate_image_endpoint():
         return jsonify({'error': 'Prompt is required'}), 400
 
     try:
+        # validate credentials
+        validate_env()
+
         # set up OpenAI API key
         openai.api_key = OPENAI_API_KEY
 
-        # call api
+        # generate image with prompt
         response = openai.images.generate(
             prompt=prompt,
             n=1,
@@ -92,9 +106,56 @@ def generate_image_endpoint():
         )
         logging.info(f"Image uploaded successfully to S3: {s3_path}")
 
+        # insert the image into the database
+        db_conn = None
+        cursor = None
+        try:
+            db_conn = get_db_connection()
+            cursor = db_conn.cursor()
+
+            # ensure a Day record exists for today
+            cursor.execute("""
+                INSERT IGNORE INTO Day (date, total_votes, total_participants, is_current)
+                VALUES (%s, 0, 0, TRUE)
+            """, (today,))
+            db_conn.commit()
+
+            logging.info(f"Successully added Day record for today: {today}")
+
+            # insert image details into the database
+            cursor.execute("""
+                INSERT INTO Image (
+                    image_id, 
+                    s3_path, 
+                    prompt_text, 
+                    creator_id,
+                    day,
+                    upvotes,
+                    downvotes,
+                    flags
+                ) VALUES (%s, %s, %s, %s, %s, 0, 0, 0)
+            """, (
+                image_id,
+                s3_path,
+                prompt,
+                'default_user',  # Placeholder user ID
+                today
+            ))
+            db_conn.commit()
+            logging.info(f"Successully added Image record to the database")
+
+        except Exception as db_error:
+            logging.error(f"Database error: {db_error}")
+            return jsonify({'error': 'Failed to insert image into database'}), 500
+        finally:
+            if cursor:
+                cursor.close()
+            if db_conn:
+                db_conn.close()
+
         # return the image information
         full_image_url = f"https://{bucket_name}.s3.amazonaws.com/{s3_path}"
-        logging.info(f"url: {full_image_url}")
+        logging.info(f"generated image url: {full_image_url}")
         return jsonify({'imageUrl': full_image_url, 'image_id': image_id})
 
     except openai.OpenAIError as e:
