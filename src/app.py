@@ -1,5 +1,4 @@
 import logging
-from aggregation import *
 from flask_cors import CORS
 from flask import request, jsonify, Flask, render_template
 import sys
@@ -22,17 +21,6 @@ CORS(app)
 bucket_name = 'pixelspatchwork'
 
 
-def get_db_connection():
-    """Create a connection to the RDS database"""
-    return mysql.connector.connect(
-        host=RDS_HOST,
-        port=RDS_PORT,
-        database=RDS_DATABASE,
-        user=RDS_USERNAME,
-        password=RDS_PASSWORD
-    )
-
-
 @app.route('/')
 def test():
     return render_template('index.html')
@@ -46,6 +34,65 @@ def generate():
 @app.route('/vote')
 def vote():
     return render_template('pages/vote.html')
+
+
+def get_db_connection():
+    """Create a connection to the RDS database"""
+    return mysql.connector.connect(
+        host=RDS_HOST,
+        port=RDS_PORT,
+        database=RDS_DATABASE,
+        user=RDS_USERNAME,
+        password=RDS_PASSWORD
+    )
+
+
+def insert_image_and_day(image_id, s3_path, prompt, today):
+    """Insert image and day record into the database."""
+    try:
+        db_conn = get_db_connection()
+        cursor = db_conn.cursor()
+
+        logging.info("Database successfully connected")
+
+        # Ensure a Day record exists for today
+        cursor.execute("""
+            INSERT IGNORE INTO Day (date, total_votes, total_participants, is_current)
+            VALUES (%s, 0, 0, TRUE)
+        """, (today,))
+        db_conn.commit()
+        logging.info(f"Successfully added Day record for today: {today}")
+
+        # Insert image details into the database
+        cursor.execute("""
+            INSERT INTO Image (
+                image_id, 
+                s3_path, 
+                prompt_text, 
+                creator_id,
+                day,
+                upvotes,
+                downvotes,
+                flags
+            ) VALUES (%s, %s, %s, %s, %s, 0, 0, 0)
+        """, (
+            image_id,
+            s3_path,
+            prompt,
+            'default_user',  # Placeholder user ID
+            today
+        ))
+        db_conn.commit()
+        logging.info("Successfully added Image record to the database")
+
+    except Exception as db_error:
+        logging.error(f"Database error: {db_error}")
+        raise
+    finally:
+        if cursor:
+            cursor.close()
+        if db_conn:
+            db_conn.close()
 
 
 @app.route('/generate-image', methods=['POST'])
@@ -106,52 +153,8 @@ def generate_image_endpoint():
         )
         logging.info(f"Image uploaded successfully to S3: {s3_path}")
 
-        # insert the image into the database
-        db_conn = None
-        cursor = None
-        try:
-            db_conn = get_db_connection()
-            cursor = db_conn.cursor()
-
-            # ensure a Day record exists for today
-            cursor.execute("""
-                INSERT IGNORE INTO Day (date, total_votes, total_participants, is_current)
-                VALUES (%s, 0, 0, TRUE)
-            """, (today,))
-            db_conn.commit()
-
-            logging.info(f"Successully added Day record for today: {today}")
-
-            # insert image details into the database
-            cursor.execute("""
-                INSERT INTO Image (
-                    image_id, 
-                    s3_path, 
-                    prompt_text, 
-                    creator_id,
-                    day,
-                    upvotes,
-                    downvotes,
-                    flags
-                ) VALUES (%s, %s, %s, %s, %s, 0, 0, 0)
-            """, (
-                image_id,
-                s3_path,
-                prompt,
-                'default_user',  # Placeholder user ID
-                today
-            ))
-            db_conn.commit()
-            logging.info(f"Successully added Image record to the database")
-
-        except Exception as db_error:
-            logging.error(f"Database error: {db_error}")
-            return jsonify({'error': 'Failed to insert image into database'}), 500
-        finally:
-            if cursor:
-                cursor.close()
-            if db_conn:
-                db_conn.close()
+        # insert the image and day record into the database
+        # insert_image_and_day(image_id, s3_path, prompt, today)
 
         # return the image information
         full_image_url = f"https://{bucket_name}.s3.amazonaws.com/{s3_path}"
