@@ -17,21 +17,24 @@ RDS_USERNAME = os.getenv('RDS_USERNAME')
 RDS_PASSWORD = os.getenv('RDS_PASSWORD')
 
 # Validate required environment variables
+
+
 def validate_env():
     missing_vars = []
     required_vars = [
-        'AWS_ACCESS_KEY_ID', 
-        'AWS_SECRET_ACCESS_KEY', 
+        'AWS_ACCESS_KEY_ID',
+        'AWS_SECRET_ACCESS_KEY',
         'OPENAI_API_KEY',
         'RDS_HOST',
         'RDS_DATABASE',
         'RDS_USERNAME',
         'RDS_PASSWORD'
     ]
-    
+
     for var in required_vars:
         if not os.getenv(var):
             missing_vars.append(var)
-    
+
     if missing_vars:
-        raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+        raise ValueError(f"Missing required environment variables: {
+                         ', '.join(missing_vars)}")

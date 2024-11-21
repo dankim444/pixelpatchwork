@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate a New Image</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div id="image-generator">
+            <h1>Generate a New Image</h1>
+            <img 
+                src="{{ url_for('static', filename='data/seed_image.jpg') }}" 
+                alt="Image description" 
+                style="display: block; margin: 1rem auto; width: 400px; height: auto;"
+            />
+            <form id="generate-form">
+                <input 
+                    type="text" 
+                    id="prompt" 
+                    placeholder="Enter a prompt for the AI to generate an image" 
+                    required
+                />
+                <button type="submit">Generate Image</but'ton>
+            </form>
+        </div>
+        <form action="{{ url_for('vote') }}" method="get">
+            <button 
+                type="submit"
+                style="display: block; margin: 1rem auto;"
+            >
+                Submit
+            </button>
+        </form>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js"></script>
+    <script src="{{ url_for('static', filename='index.js') }}"></script>
+    <script>
+        document.getElementById('generate-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const prompt = document.getElementById('prompt').value;
+        const response = await fetch('/generate-image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ prompt })
+        });
+        const data = await response.json();
+        if (data.imageUrl) {
+            document.getElementById('result').innerHTML = `<img src="${data.imageUrl}" alt="Generated Image">`;
+        } else {
+            document.getElementById('result').innerHTML = `<p>${data.error}</p>`;
+        }
+        });
+    </script>
+    
+</body>
+</html>

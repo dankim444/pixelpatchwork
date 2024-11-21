@@ -1,16 +1,17 @@
+from config import *
+from datetime import datetime
+import mysql.connector
+import boto3
+import requests
+import openai
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
-import openai
-import requests
-import boto3
-import mysql.connector
-from datetime import datetime
-from config import *
 
 # Set your API key
-#Note: PLEASE DO NOT RUN THIS MORE THAN ONCE OR TWICE, IT COST LIKE 0.02 cents every time it runs
+# Note: PLEASE DO NOT RUN THIS MORE THAN ONCE OR TWICE, IT COST LIKE 0.02 cents every time it runs
+
 
 def get_db_connection():
     """Create a connection to the RDS database"""
@@ -21,6 +22,7 @@ def get_db_connection():
         user=RDS_USERNAME,
         password=RDS_PASSWORD
     )
+
 
 def generate_image(prompt, size="1024x1024", n=1):
     """
@@ -37,7 +39,7 @@ def generate_image(prompt, size="1024x1024", n=1):
 
         # Set OpenAI API key
         openai.api_key = OPENAI_API_KEY
-        
+
         # Initialize S3 client
         s3 = boto3.client(
             's3',
@@ -63,7 +65,7 @@ def generate_image(prompt, size="1024x1024", n=1):
             prompt=prompt,
             n=n,
             size=size,
-            response_format="url" 
+            response_format="url"
         )
 
         # Extract image URLs from the response
@@ -80,7 +82,7 @@ def generate_image(prompt, size="1024x1024", n=1):
 
                 # Define S3 path
                 s3_path = f'daily-submissions/{today}/{image_id}.png'
-                
+
                 # Upload to S3
                 try:
                     s3.put_object(
@@ -115,11 +117,13 @@ def generate_image(prompt, size="1024x1024", n=1):
                     db_conn.commit()
 
                     uploaded_images.append((image_id, s3_path))
-                    print(f"Image {idx+1} uploaded to s3://{bucket_name}/{s3_path} and saved to database")
+                    print(
+                        f"Image {idx+1} uploaded to s3://{bucket_name}/{s3_path} and saved to database")
                 except Exception as e:
                     print(f"Failed to upload to S3: {e}")
             else:
-                print(f"Failed to download image {idx+1}. Status Code: {image_response.status_code}")
+                print(f"Failed to download image {
+                      idx+1}. Status Code: {image_response.status_code}")
 
         return uploaded_images
 
@@ -138,6 +142,7 @@ def generate_image(prompt, size="1024x1024", n=1):
             cursor.close()
         if 'db_conn' in locals() and db_conn:
             db_conn.close()
+
 
 if __name__ == "__main__":
     # Define your prompt and output path
