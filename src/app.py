@@ -9,6 +9,9 @@ import mysql.connector
 import boto3
 import requests
 import openai
+import base64
+from io import BytesIO
+from PIL import Image
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -17,6 +20,8 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 CORS(app)
 bucket_name = 'pixelspatchwork'
+
+### routes for pages ###
 
 
 @app.route('/')
@@ -41,6 +46,8 @@ def goodbye():
     return render_template('pages/goodbye.html')
 
 
+### helper functions ###
+
 def get_db_connection():
     """Create a connection to the RDS database"""
     return mysql.connector.connect(
@@ -53,15 +60,12 @@ def get_db_connection():
 
 
 def get_seed_image():
-    """Determine the seed image to display based on the day"""
+    """Get the seed image URL for the current day or default seed image."""
     try:
         db_conn = get_db_connection()
         cursor = db_conn.cursor(dictionary=True)
 
-        logging.info(f"Database successfully connected")
-
         today = datetime.now().date()
-        logging.info(f"Today's date: {today}")
 
         # check if there are any previous days with images
         cursor.execute("""
@@ -89,13 +93,15 @@ def get_seed_image():
                 return seed_image_url
 
         # if no previous images or error, return default seed image
-        seed_image_url = url_for('static', filename='data/seed_image.jpg')
+        seed_image_url = url_for(
+            'static', filename='data/seed_image.jpg', _external=True)
         return seed_image_url
 
     except Exception as e:
         logging.error(f"Error fetching seed image: {e}")
         # return default seed image in case of error
-        seed_image_url = url_for('static', filename='data/seed_image.jpg')
+        seed_image_url = url_for(
+            'static', filename='data/seed_image.jpg', _external=True)
         return seed_image_url
 
     finally:
@@ -134,16 +140,24 @@ def insert_day(image_id, today):
             db_conn.close()
 
 
+### endpoints ###
+
 @app.route('/generate-image', methods=['POST'])
 def generate_image_endpoint():
     logging.info("Endpoint /generate-image was hit")
 
-    # extract the prompt from the request
+    # extract the prompt and mask from the request
     data = request.get_json()
     prompt = data.get('prompt')
+    mask_data_url = data.get('mask')  # Base64 encoded mask image
+
     if not prompt:
         logging.warning("Prompt is missing in the request")
         return jsonify({'error': 'Prompt is required'}), 400
+
+    if not mask_data_url:
+        logging.warning("Mask is missing in the request")
+        return jsonify({'error': 'Mask is required'}), 400
 
     try:
         # validate credentials
@@ -152,13 +166,45 @@ def generate_image_endpoint():
         # set up OpenAI API key
         openai.api_key = OPENAI_API_KEY
 
-        # generate image with prompt
-        response = openai.images.generate(
+        # get the seed image
+        seed_image_url = get_seed_image()
+        seed_image_response = requests.get(seed_image_url)
+        if seed_image_response.status_code != 200:
+            logging.error(f"Failed to download seed image: {
+                          seed_image_response.status_code}")
+            return jsonify({'error': 'Failed to download seed image'}), 500
+
+        # convert seed image to PIL Image
+        seed_image = Image.open(
+            BytesIO(seed_image_response.content)).convert("RGBA")
+
+        # decode mask image from base64
+        header, encoded = mask_data_url.split(",", 1)
+        mask_data = base64.b64decode(encoded)
+        mask_image = Image.open(BytesIO(mask_data)).convert("RGBA")
+
+        # ensure both images are the same size
+        seed_image = seed_image.resize((512, 512))
+        mask_image = mask_image.resize((512, 512))
+
+        # save images to temporary files
+        seed_image_file = BytesIO()
+        seed_image.save(seed_image_file, format='PNG')
+        seed_image_file.seek(0)
+
+        mask_image_file = BytesIO()
+        mask_image.save(mask_image_file, format='PNG')
+        mask_image_file.seek(0)
+
+        # use OpenAI's images.edit() method
+        response = openai.images.edit(
+            image=seed_image_file,
+            mask=mask_image_file,
             prompt=prompt,
             n=1,
-            size="1024x1024"
+            size="512x512"
         )
-        logging.info("Image generated successfully using OpenAI's API.")
+        logging.info("Image edited successfully using OpenAI's API.")
 
         # extract url
         image_url = response.data[0].url
