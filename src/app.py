@@ -258,5 +258,82 @@ def insert_image():
             db_conn.close()
 
 
+@app.route('/get-images', methods=['GET'])
+def get_images():
+    logging.info("Endpoint /get-images was hit")
+    day = request.args.get('day')
+
+    if not day:
+        return jsonify({'message': 'Day is required'}), 400
+
+    try:
+        db_conn = get_db_connection()
+        cursor = db_conn.cursor(dictionary=True)
+
+        logging.info("Database successfully connected")
+
+        # query for images for the given day, limited to 10
+        cursor.execute("""
+            SELECT image_id, s3_path, prompt_text, upvotes, downvotes
+            FROM Image
+            WHERE day = %s
+            LIMIT 10
+        """, (day,))
+
+        images = cursor.fetchall()
+
+        if images:
+            return jsonify({'images': images}), 200
+        else:
+            return jsonify({'message': 'Looks like there were no images from today!'}), 200
+
+    except Exception as e:
+        logging.error(f"Error fetching images: {e}")
+        return jsonify({'error': 'Failed to fetch images'}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'db_conn' in locals():
+            db_conn.close()
+
+
+@app.route('/vote-image', methods=['POST'])
+def vote_image():
+    data = request.get_json()
+    image_id = data.get('image_id')
+    vote_delta = data.get('vote_value')  # delta change (+1, -1, 0)
+
+    if not image_id or vote_delta not in [-1, 0, 1]:
+        return jsonify({'error': 'Invalid image ID or vote value'}), 400
+
+    try:
+        db_conn = get_db_connection()
+        cursor = db_conn.cursor()
+
+        # update upvotes or downvotes based on vote delta
+        if vote_delta == 1:
+            cursor.execute(
+                "UPDATE Image SET upvotes = upvotes + 1 WHERE image_id = %s", (image_id,))
+        elif vote_delta == -1:
+            cursor.execute(
+                "UPDATE Image SET downvotes = downvotes + 1 WHERE image_id = %s", (image_id,))
+        elif vote_delta == 0:
+            # No action needed if delta is 0
+            pass
+
+        db_conn.commit()
+
+        return jsonify({'message': 'Vote recorded successfully'}), 200
+
+    except Exception as e:
+        logging.error(f"Error voting on image: {e}")
+        return jsonify({'error': 'Failed to record vote'}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'db_conn' in locals():
+            db_conn.close()
+
+
 if __name__ == '__main__':
     app.run(debug=True)
