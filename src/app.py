@@ -114,7 +114,7 @@ def generate_image_endpoint():
         openai.api_key = OPENAI_API_KEY
 
         # generate image with prompt
-        response = openai.Image.create(
+        response = openai.images.generate(
             prompt=prompt,
             n=1,
             size="1024x1024"
@@ -128,7 +128,8 @@ def generate_image_endpoint():
         # download image
         image_response = requests.get(image_url)
         if image_response.status_code != 200:
-            logging.error(f"Failed to download image: {image_response.status_code}")
+            logging.error(f"Failed to download image: {
+                          image_response.status_code}")
             return jsonify({'error': 'Failed to download image'}), 500
 
         # generate a unique image ID
@@ -153,7 +154,7 @@ def generate_image_endpoint():
         logging.info(f"Image uploaded successfully to S3: {s3_path}")
 
         # insert the image and day record into the database
-        # insert_image_and_day(image_id, s3_path, prompt, today)
+        insert_image_and_day(image_id, s3_path, prompt, today)
 
         # return the image information
         full_image_url = f"https://{bucket_name}.s3.amazonaws.com/{s3_path}"
