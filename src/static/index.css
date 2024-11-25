@@ -195,3 +195,11 @@ button[type="submit"] {
 button[type="submit"]:hover {
     background-color: #45a049;
 }
+
+#loading-message {
+    display: none;
+    text-align: center;
+    font-size: 1.2rem;
+    color: #333;
+    margin-top: 1rem;
+}

@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generate a New Image</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
 </head>
@@ -24,8 +23,10 @@
                     placeholder="Enter a prompt for the AI to generate an image" 
                     required
                 />
-                <button type="submit">Generate Image</button>
+                <button type="submit" id="generate-button">Generate Image</button>
             </form>
+            <!-- Loading message -->
+            <div id="loading-message">Generating image, please wait...</div>
             <button 
                 id="submit-button"
                 type="submit"
@@ -42,32 +43,36 @@
             image_id: null,
             s3_path: null,
             prompt_text: null,
-            created_at: createdAt, // current timestamp
+            created_at: createdAt,
             creator_id: localStorage.getItem('user_id'),
-            day: createdAt.split('T')[0], // today's date
+            day: createdAt.split('T')[0],
             upvotes: 0,
             downvotes: 0,
             flags: 0,
         };
 
-        console.log(localStorage.getItem('user_id'));
-    
         // track how many times the 'Generate Image' button has been pressed
         let generateCount = parseInt(localStorage.getItem('generateCount')) || 0;
         const maxGenerates = 10;
-    
+
         // generate image
         document.getElementById('generate-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-    
+
             // check if the user has exceeded the generate limit
             if (generateCount >= maxGenerates) {
-                alert('You have reached the maximum number of image generations (3).');
+                alert('You have reached the maximum number of image generations (10).');
                 return;
             }
-    
+
             const prompt = document.getElementById('prompt').value;
-    
+
+            // show loading message and disable generate button
+            const loadingMessage = document.getElementById('loading-message');
+            loadingMessage.style.display = 'block';
+            const generateButton = document.getElementById('generate-button');
+            generateButton.disabled = true;
+
             try {
                 const response = await fetch('/generate-image', {
                     method: 'POST',
@@ -76,13 +81,13 @@
                     },
                     body: JSON.stringify({ prompt })
                 });
-    
+
                 const data = await response.json();
                 if (data.imageUrl) {
                     // update the image src
                     const imageElement = document.getElementById('generated-image');
                     imageElement.src = data.imageUrl; // update image element
-    
+
                     // update current image data
                     currentImage = {
                         image_id: data.image_id,
@@ -95,7 +100,7 @@
                         downvotes: 0,
                         flags: 0,
                     };
-    
+
                     // insert image into database
                     const insertResponse = await fetch('/insert-image', {
                         method: 'POST',
@@ -104,14 +109,14 @@
                         },
                         body: JSON.stringify(currentImage)
                     });
-    
+
                     const insertData = await insertResponse.json();
                     if (!insertResponse.ok) {
                         alert(insertData.error || 'Failed to insert image into database.');
                     } else {
                         console.log('Image inserted into database successfully:', insertData.message);
                     }
-    
+
                     generateCount++; // increment count
                     localStorage.setItem('generateCount', generateCount);
                 } else {
@@ -120,19 +125,23 @@
             } catch (error) {
                 console.error('Error generating or inserting image:', error);
                 alert('An error occurred while processing the image.');
+            } finally {
+                // hide loading message and re-enable generate button
+                loadingMessage.style.display = 'none';
+                generateButton.disabled = false;
             }
         });
-    
+
         // submit image
         document.getElementById('submit-button').addEventListener('click', async () => {
             if (!currentImage.image_id || !currentImage.s3_path) {
                 alert('Please generate an image before submitting.');
                 return;
             }
-    
+
             // redirect to the next page
             window.location.href = '/vote';
         });
-    </script>    
+    </script>
 </body>
 </html>
