@@ -114,7 +114,7 @@ def generate_image_endpoint():
         openai.api_key = OPENAI_API_KEY
 
         # generate image with prompt
-        response = openai.images.generate(
+        response = openai.Image.create(
             prompt=prompt,
             n=1,
             size="1024x1024"
@@ -128,8 +128,7 @@ def generate_image_endpoint():
         # download image
         image_response = requests.get(image_url)
         if image_response.status_code != 200:
-            logging.error(f"Failed to download image: {
-                          image_response.status_code}")
+            logging.error(f"Failed to download image: {image_response.status_code}")
             return jsonify({'error': 'Failed to download image'}), 500
 
         # generate a unique image ID
