@@ -20,4 +20,37 @@
         </form>
     </div>
 </body>
+<script>
+    // generate or retrieve the user_id and created_at timestamp
+    let userId = sessionStorage.getItem('user_id');
+    let createdAt = sessionStorage.getItem('created_at');
+
+    if (!userId) {
+        userId = crypto.randomUUID(); // generate a unique ID
+        createdAt = new Date().toISOString(); // generate the current timestamp
+        sessionStorage.setItem('user_id', userId);
+        sessionStorage.setItem('created_at', createdAt);
+    }
+
+    console.log(`User ID: ${userId}`);
+    console.log(`Created At: ${createdAt}`);
+
+    // send the user_id and created_at timestamp to the server
+    fetch('/track-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, created_at: createdAt })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error(`Error tracking user: ${data.error}`);
+        } else {
+            console.log('User tracked successfully:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Failed to track user:', error);
+    });
+</script>
 </html>

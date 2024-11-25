@@ -171,5 +171,43 @@ def generate_image_endpoint():
         return jsonify({'error': 'Failed to generate image'}), 500
 
 
+@app.route('/track-user', methods=['POST'])
+def track_user():
+    data = request.get_json()
+    user_id = data.get('user_id')
+    created_at = data.get('created_at')
+
+    if not user_id or not created_at:
+        return jsonify({'error': 'Missing user_id or created_at'}), 400
+
+    try:
+        db_conn = get_db_connection()
+        cursor = db_conn.cursor()
+
+        logging.info("Database successfully connected")
+        logging.info(f'user_id: {user_id}')
+        logging.info(f'created_at: {created_at}')
+
+        # Insert or update the user in the database
+        cursor.execute("""
+            INSERT INTO User (user_id, username, created_at, is_banned)
+            VALUES (%s, %s, %s, FALSE)
+            ON DUPLICATE KEY UPDATE created_at = VALUES(created_at)
+        """, (user_id, 'Unknown', created_at))
+        db_conn.commit()
+
+        logging.info("User tracked successfully!")
+
+        return jsonify({'message': 'User tracked successfully'}), 200
+    except Exception as e:
+        logging.error(f"Error tracking user: {e}")
+        return jsonify({'error': 'Failed to track user'}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'db_conn' in locals():
+            db_conn.close()
+
+
 if __name__ == '__main__':
     app.run(debug=True)
