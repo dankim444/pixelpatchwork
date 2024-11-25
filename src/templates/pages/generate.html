@@ -37,29 +37,38 @@
     </div>
     <script src="{{ url_for('static', filename='index.js') }}"></script>
     <script>
+        const createdAt = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+
         let currentImage = {
             image_id: null,
             s3_path: null,
             prompt_text: null,
-            day: new Date().toISOString().split('T')[0] // today's date
+            created_at: createdAt, // current timestamp
+            creator_id: localStorage.getItem('user_id'),
+            day: createdAt.split('T')[0], // today's date
+            upvotes: 0,
+            downvotes: 0,
+            flags: 0,
         };
 
+        console.log(localStorage.getItem('user_id'));
+    
         // track how many times the 'Generate Image' button has been pressed
         let generateCount = parseInt(localStorage.getItem('generateCount')) || 0;
         const maxGenerates = 3;
-
+    
         // generate image
         document.getElementById('generate-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-
+    
             // check if the user has exceeded the generate limit
             if (generateCount >= maxGenerates) {
                 alert('You have reached the maximum number of image generations (3).');
                 return;
             }
-
+    
             const prompt = document.getElementById('prompt').value;
-
+    
             try {
                 const response = await fetch('/generate-image', {
                     method: 'POST',
@@ -68,43 +77,63 @@
                     },
                     body: JSON.stringify({ prompt })
                 });
-                
+    
                 const data = await response.json();
                 if (data.imageUrl) {
                     // update the image src
                     const imageElement = document.getElementById('generated-image');
                     imageElement.src = data.imageUrl; // update image element
-
+    
                     // update current image data
                     currentImage = {
                         image_id: data.image_id,
                         s3_path: data.imageUrl.split('.com/')[1],
                         prompt_text: prompt,
-                        day: new Date().toISOString().split('T')[0]
+                        creator_id: localStorage.getItem('user_id'),
+                        day: data.day,
+                        created_at: data.created_at,
+                        upvotes: 0,
+                        downvotes: 0,
+                        flags: 0,
                     };
-
+    
+                    // insert image into database
+                    const insertResponse = await fetch('/insert-image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(currentImage)
+                    });
+    
+                    const insertData = await insertResponse.json();
+                    if (!insertResponse.ok) {
+                        alert(insertData.error || 'Failed to insert image into database.');
+                    } else {
+                        console.log('Image inserted into database successfully:', insertData.message);
+                    }
+    
                     generateCount++; // increment count
                     localStorage.setItem('generateCount', generateCount);
                 } else {
-                    console.log('error', data.error)
                     alert(data.error || 'Failed to generate image.');
                 }
             } catch (error) {
-                console.error('Error generating image:', error);
-                alert('An error occurred while generating the image.');
+                console.error('Error generating or inserting image:', error);
+                alert('An error occurred while processing the image.');
             }
         });
-
+    
         // submit image
         document.getElementById('submit-button').addEventListener('click', async () => {
             if (!currentImage.image_id || !currentImage.s3_path) {
                 alert('Please generate an image before submitting.');
                 return;
             }
-
+    
             // redirect to the next page
             window.location.href = '/vote';
         });
-    </script>
+    </script>    
 </body>
 </html>
