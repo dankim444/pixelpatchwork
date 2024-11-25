@@ -6,7 +6,7 @@ Welcome to our collaborative crowdsourcing project! This system allows users to 
 
 ## How to Access
 
-- **Access Link**: [INSERT LINK HERE]
+- **Access Link**: https://drive.google.com/file/d/1cbrx6hRfo_QMN09dUHO5cXTZXxB6-nAL/view
 
 No prerequisites or account setup are required. Just click the link and start contributing!
 
@@ -21,7 +21,7 @@ No prerequisites or account setup are required. Just click the link and start co
    Users can type in up to 10 text prompts to suggest modifications or improvements to the image.
 
 3. **Vote on the Best Image**:
-   Once all contributions are submitted, users vote on the most improved or creative image.
+   Once all contributions are submitted, users can upvote or downvotes images submitted on the same day by ther users.
 
 4. **New Day, New Image**:
    At the end of the voting period, the image with the highest votes becomes the seed image for the next day.
