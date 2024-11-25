@@ -131,6 +131,8 @@ def generate_image_endpoint():
         if image_response.status_code != 200:
             logging.error(
                 f"Failed to download image: {image_response.status_code}")
+            logging.error(f"Failed to download image: {
+                          image_response.status_code}")
             return jsonify({'error': 'Failed to download image'}), 500
 
         # generate a unique image ID
