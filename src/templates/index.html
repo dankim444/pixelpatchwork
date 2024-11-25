@@ -8,12 +8,57 @@
 </head>
 <body>
     <div class="container">
-        <h1>Welcome to PixelPatchwork</h1>
-        <h3>Use this app to generate unique images and vote for your favorites. Click the button below to get started.</h3>
+        <h1>Crowdsourced Image Evolution Platform</h1>
+        <p>Welcome to our collaborative crowdsourcing project! This system allows users to collectively evolve a seed image into more creative and “better” versions by typing prompts and voting on the results. Each day, the image with the highest votes becomes the new seed image for further transformations.</p>
+        <hr>
+        <h3>How to Access</h3>
+        <ul>
+            <li><strong>Access Link</strong>: <a href="https://drive.google.com/file/d/1cbrx6hRfo_QMN09dUHO5cXTZXxB6-nAL/view">Click here to access</a></li>
+        </ul>
+        <p>No prerequisites or account setup are required. Just click the link and start contributing!</p>
+        <hr>
+        <h3>How It Works</h3>
+        <ol>
+            <li>
+                <strong>View the Seed Image</strong>:<br>
+                Every day, a seed image is displayed on the webpage as the starting point for creativity.
+            </li>
+            <li>
+                <strong>Submit Prompts</strong>:<br>
+                Users can type in up to 10 text prompts to suggest modifications or improvements to the image.
+            </li>
+            <li>
+                <strong>Vote on the Best Image</strong>:<br>
+                Once all contributions are submitted, users can upvote or downvote images submitted on the same day by other users.
+            </li>
+            <li>
+                <strong>New Day, New Image</strong>:<br>
+                At the end of the voting period, the image with the highest votes becomes the seed image for the next day.
+            </li>
+        </ol>
+        <hr>
+        <h3>Contributing to the Project</h3>
+        <p>Your input is crucial to the success of this system! Here’s how you can participate:</p>
+        <ol>
+            <li>Submit creative prompts to improve the image.</li>
+            <li>Vote on the most engaging or well-executed modifications.</li>
+            <li>Share feedback or report issues using the contact method below.</li>
+        </ol>
+        <hr>
+        <h3>Troubleshooting and Feedback</h3>
+        <p>If you encounter any issues or have suggestions, please reach out at:</p>
+        <ul>
+            <li><strong><a href="mailto:dankim1@seas.upenn.edu">dankim1@seas.upenn.edu</a> (Dan Kim)</strong></li>
+            <li><strong><a href="mailto:jasonfig@seas.upenn.edu">jasonfig@seas.upenn.edu</a> (Jason Figueroa)</strong></li>
+            <li><strong><a href="mailto:ryanzh@seas.upenn.edu">ryanzh@seas.upenn.edu</a> (Ryan Zhou)</strong></li>
+            <li><strong><a href="mailto:bangchel@sas.upenn.edu">bangchel@sas.upenn.edu</a> (Via)</strong></li>
+            <li><strong><a href="mailto:johnmaj@seas.upenn.edu">johnmaj@seas.upenn.edu</a> (John Majernik)</strong></li>
+        </ul>
+        <hr>
         <form action="{{ url_for('generate') }}" method="get">
             <button 
                 type="submit" 
-                style="display: block; margin: 1rem auto;"
+                style="display: block; margin: 2rem auto;"
             >
                 Begin
             </button>

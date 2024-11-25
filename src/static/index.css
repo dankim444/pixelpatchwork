@@ -29,6 +29,20 @@ h3 {
     margin-bottom: 2rem;
 }
 
+ul {
+    text-align: center;
+}
+
+ol {
+    text-align: center;
+}
+
+li {
+    text-align: center;
+    list-style: none;
+    margin-bottom: 1rem;
+}
+
 p {
     text-align: center;
     color: #333;

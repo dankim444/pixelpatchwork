@@ -40,4 +40,9 @@ Your input is crucial to the success of this system! Here’s how you can partic
 
 ## Troubleshooting and Feedback
 
-If you encounter any issues or have suggestions, please reach out at:
+If you encounter any issues or have suggestions, please reach out at: 
+- dankim1@seas.upenn.edu (Dan Kim)
+- jasonfig@seas.upenn.edu (Jason Figueroa)
+- ryanzh@seas.upenn.edu (Ryan Zhou)
+- bangchel@sas.upenn.edu (Via)
+- johnmaj@seas.upenn.edu (John Majernik)
