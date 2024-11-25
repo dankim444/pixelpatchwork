@@ -54,12 +54,13 @@ def insert_image_and_day(image_id, s3_path, prompt, today):
         cursor = db_conn.cursor()
 
         logging.info("Database successfully connected")
+        logging.info(f'image_id: {image_id}')
 
         # Ensure a Day record exists for today
         cursor.execute("""
-            INSERT IGNORE INTO Day (date, total_votes, total_participants, is_current)
-            VALUES (%s, 0, 0, TRUE)
-        """, (today,))
+            INSERT IGNORE INTO Day (date, seed_image_id, total_votes, total_participants, is_current)
+            VALUES (%s, %s, 0, 0, TRUE)
+        """, (today, image_id))
         db_conn.commit()
         logging.info(f"Successfully added Day record for today: {today}")
 

@@ -45,8 +45,8 @@
         };
 
         // track how many times the 'Generate Image' button has been pressed
-        //let generateCount = parseInt(localStorage.getItem('generateCount')) || 0;
-        //const maxGenerates = 3;
+        let generateCount = parseInt(localStorage.getItem('generateCount')) || 0;
+        const maxGenerates = 3;
 
         // generate image
         document.getElementById('generate-form').addEventListener('submit', async (e) => {
@@ -83,8 +83,8 @@
                         day: new Date().toISOString().split('T')[0]
                     };
 
-                    //generateCount++; // increment count
-                    //localStorage.setItem('generateCount', generateCount);
+                    generateCount++; // increment count
+                    localStorage.setItem('generateCount', generateCount);
                 } else {
                     console.log('error', data.error)
                     alert(data.error || 'Failed to generate image.');
