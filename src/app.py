@@ -301,26 +301,41 @@ def get_images():
 def vote_image():
     data = request.get_json()
     image_id = data.get('image_id')
-    vote_delta = data.get('vote_value')  # delta change (+1, -1, 0)
+    current_vote = data.get('current_vote')  # -1, 0, +1
+    new_vote = data.get('new_vote')  # -1, 0, +1
 
-    if not image_id or vote_delta not in [-1, 0, 1]:
-        return jsonify({'error': 'Invalid image ID or vote value'}), 400
+    if not image_id or current_vote not in [-1, 0, 1] or new_vote not in [-1, 0, 1]:
+        return jsonify({'error': 'Invalid image ID or vote values'}), 400
 
     try:
         db_conn = get_db_connection()
         cursor = db_conn.cursor()
 
-        # update upvotes or downvotes based on vote delta
-        if vote_delta == 1:
-            cursor.execute(
-                "UPDATE Image SET upvotes = upvotes + 1 WHERE image_id = %s", (image_id,))
-        elif vote_delta == -1:
-            cursor.execute(
-                "UPDATE Image SET downvotes = downvotes + 1 WHERE image_id = %s", (image_id,))
-        elif vote_delta == 0:
-            # No action needed if delta is 0
-            pass
+        # calculate the changes in upvotes and downvotes
+        upvote_change = 0
+        downvote_change = 0
 
+        if current_vote == 0 and new_vote == 1:
+            upvote_change = 1
+        elif current_vote == 1 and new_vote == 0:
+            upvote_change = -1
+        elif current_vote == 1 and new_vote == -1:
+            upvote_change = -1
+            downvote_change = 1
+        elif current_vote == 0 and new_vote == -1:
+            downvote_change = 1
+        elif current_vote == -1 and new_vote == 0:
+            downvote_change = -1
+        elif current_vote == -1 and new_vote == 1:
+            downvote_change = -1
+            upvote_change = 1
+        # else no change
+
+        # ensure votes don't go negative
+        cursor.execute(
+            "UPDATE Image SET upvotes = GREATEST(0, upvotes + %s), downvotes = GREATEST(0, downvotes + %s) WHERE image_id = %s",
+            (upvote_change, downvote_change, image_id)
+        )
         db_conn.commit()
 
         return jsonify({'message': 'Vote recorded successfully'}), 200
