@@ -10,7 +10,7 @@
     <div class="container">
         <div id="image-generator">
             <h1>Generate a New Image</h1>
-            <h3>Please avoid generating more than 3 times. You may have to wait a few moments.</h3>
+            <h3>Please avoid generating more than 10 times. You may have to wait a few moments.</h3>
             <img 
                 id="generated-image"
                 src="{{ url_for('static', filename='data/seed_image.jpg') }}" 
@@ -54,7 +54,7 @@
     
         // track how many times the 'Generate Image' button has been pressed
         let generateCount = parseInt(localStorage.getItem('generateCount')) || 0;
-        const maxGenerates = 3;
+        const maxGenerates = 10;
     
         // generate image
         document.getElementById('generate-form').addEventListener('submit', async (e) => {
