@@ -36,6 +36,11 @@ def vote():
     return render_template('pages/vote.html')
 
 
+@app.route('/goodbye')
+def goodbye():
+    return render_template('pages/goodbye.html')
+
+
 def get_db_connection():
     """Create a connection to the RDS database"""
     return mysql.connector.connect(

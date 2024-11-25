@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Thank You for Participating</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div id="thank-you-message">
+            <h1>Thank You for Participating!</h1>
+            <h3>Your contribution is appreciated.</h3>
+            <h3>We value your input and hope you enjoyed generating and voting on images.</h3>
+            <div style="text-align: center; margin-top: 2rem;">
+                <button type="submit" onclick="redirectToHome()">Return to Home</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        function redirectToHome() {
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
