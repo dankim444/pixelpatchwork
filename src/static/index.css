@@ -29,6 +29,31 @@ h3 {
     margin-bottom: 2rem;
 }
 
+hr {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+ul {
+    text-align: center;
+}
+
+ol {
+    text-align: center;
+}
+
+li {
+    text-align: center;
+    list-style: none;
+    margin-bottom: 1rem;
+}
+
+p {
+    text-align: center;
+    color: #333;
+    margin-bottom: 2rem;
+}
+
 .image-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -194,4 +219,12 @@ button[type="submit"] {
 
 button[type="submit"]:hover {
     background-color: #45a049;
+}
+
+#loading-message {
+    display: none;
+    text-align: center;
+    font-size: 1.2rem;
+    color: #333;
+    margin-top: 1rem;
 }

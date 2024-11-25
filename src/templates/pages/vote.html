@@ -8,9 +8,12 @@
 </head>
 <body>
     <div class="container">
-        <h1>Vote for your favorite images!</h1>
-        <h3>Feel free to select more than one. Downvote any you feel are inappropriate.</h3>
+        <h1>Upvote or downvote your favorite images!</h1>
+        <h3>These are all images generated from you and other users today.</h3>
         <div id="imageContainer" class="image-grid"></div>
+    </div>
+    <div style="text-align: center; margin-top: 2rem;">
+        <button type="submit" onclick="redirectToThankYou()">Finish</button>
     </div>
     <script>
         const currentDate = new Date().toISOString().split('T')[0]; // today's date in YYYY-MM-DD format
@@ -145,6 +148,10 @@
         // show a message in the image container
         function showMessage(message) {
             imageContainer.innerHTML = `<div class="message">${message}</div>`;
+        }
+
+        function redirectToThankYou() {
+            window.location.href = '/goodbye';
         }
 
         // fetch images on page load

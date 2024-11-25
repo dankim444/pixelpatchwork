@@ -1,8 +1,7 @@
 import logging
 from flask_cors import CORS
-from flask import request, jsonify, Flask, render_template
+from flask import request, jsonify, Flask, render_template, url_for
 import sys
-
 import uuid
 from config import *
 from datetime import datetime
@@ -12,7 +11,6 @@ import requests
 import openai
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
-
 
 logging.basicConfig(level=logging.INFO)
 
@@ -28,12 +26,19 @@ def test():
 
 @app.route('/generate')
 def generate():
-    return render_template('pages/generate.html')
+    # get the seed image URL based on the day
+    seed_image_url = get_seed_image()
+    return render_template('pages/generate.html', seed_image_url=seed_image_url)
 
 
 @app.route('/vote')
 def vote():
     return render_template('pages/vote.html')
+
+
+@app.route('/goodbye')
+def goodbye():
+    return render_template('pages/goodbye.html')
 
 
 def get_db_connection():
@@ -45,6 +50,59 @@ def get_db_connection():
         user=RDS_USERNAME,
         password=RDS_PASSWORD
     )
+
+
+def get_seed_image():
+    """Determine the seed image to display based on the day"""
+    try:
+        db_conn = get_db_connection()
+        cursor = db_conn.cursor(dictionary=True)
+
+        logging.info(f"Database successfully connected")
+
+        today = datetime.now().date()
+        logging.info(f"Today's date: {today}")
+
+        # check if there are any previous days with images
+        cursor.execute("""
+            SELECT DISTINCT day FROM Image
+            WHERE day < %s
+            ORDER BY day DESC
+            LIMIT 1
+        """, (today,))
+        day_row = cursor.fetchone()
+
+        if day_row:
+            previous_day = day_row['day']
+            # find the image with the highest upvotes for that day
+            cursor.execute("""
+                SELECT s3_path FROM Image
+                WHERE day = %s
+                ORDER BY upvotes DESC, downvotes ASC, created_at ASC
+                LIMIT 1
+            """, (previous_day,))
+            image_row = cursor.fetchone()
+            if image_row:
+                s3_path = image_row['s3_path']
+                seed_image_url = f"https://{
+                    bucket_name}.s3.amazonaws.com/{s3_path}"
+                return seed_image_url
+
+        # if no previous images or error, return default seed image
+        seed_image_url = url_for('static', filename='data/seed_image.jpg')
+        return seed_image_url
+
+    except Exception as e:
+        logging.error(f"Error fetching seed image: {e}")
+        # return default seed image in case of error
+        seed_image_url = url_for('static', filename='data/seed_image.jpg')
+        return seed_image_url
+
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'db_conn' in locals():
+            db_conn.close()
 
 
 def insert_day(image_id, today):
@@ -109,8 +167,6 @@ def generate_image_endpoint():
         # download image
         image_response = requests.get(image_url)
         if image_response.status_code != 200:
-            logging.error(
-                f"Failed to download image: {image_response.status_code}")
             logging.error(f"Failed to download image: {
                           image_response.status_code}")
             return jsonify({'error': 'Failed to download image'}), 500
