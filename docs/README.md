@@ -1,3 +1,15 @@
+# Setup Instructions
+
+To get started with the project, follow these steps:
+
+1. **Clone the Repository**
+2. **Create a virtual environment**: python3 -m venv venv
+3. **Activate virtual environment**: source venv/bin/activate (for mac); .\venv\Scripts\activate (on windows)
+4. **Install required packages**: pip install -r requirements.txt
+5. **Set Up Environment Variables**: Create a .env file in the root directory of the project and add the necessary environment variables. You can use the .env.example file as a template.
+6. **Run the Flask app**: Use the command `python3 src/app.py` to start the Flask application.
+
+
 # Project Overview
 
 Our project will begin by redirecting workers to a site we have set up. In the beginning of the day the site will have a starting image along with a request asking the workers to give a prompt to update the image. This request could be something along the lines of "Write a prompt to make this image funnier." Once the worker gives a request for a change to this image we use gpt image generation to make that change. We then store this image (possibly in local storage). In the second half of the workflow, we then show the user all the images generated for the day and ask the user to vote on which image they like the most. This will then lead to a final image that wins. This final image will then be the starting image for the next day. By the end of the experiment we will have a list of winning images along with an end image which is the result of all the days of aggregation.
