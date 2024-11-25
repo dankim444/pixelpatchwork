@@ -6,7 +6,7 @@ Welcome to our collaborative crowdsourcing project! This system allows users to 
 
 ## How to Access
 
-- **Access Link**: [INSERT LINK HERE]
+- **Access Link**: http://127.0.0.1:5000/
 
 No prerequisites or account setup are required. Just click the link and start contributing!
 
@@ -18,7 +18,7 @@ No prerequisites or account setup are required. Just click the link and start co
    Every day, a seed image is displayed on the webpage as the starting point for creativity.
 
 2. **Submit Prompts**:
-   Users can type in up to 10 text prompts to suggest modifications or improvements to the image.
+   Users can type in up to 3 text prompts to suggest modifications or improvements to the image.
 
 3. **Vote on the Best Image**:
    Once all contributions are submitted, users vote on the most improved or creative image.

@@ -66,9 +66,9 @@ def insert_image_and_day(image_id, s3_path, prompt, today):
         # Insert image details into the database
         cursor.execute("""
             INSERT INTO Image (
-                image_id, 
-                s3_path, 
-                prompt_text, 
+                image_id,
+                s3_path,
+                prompt_text,
                 creator_id,
                 day,
                 upvotes,
@@ -128,8 +128,8 @@ def generate_image_endpoint():
         # download image
         image_response = requests.get(image_url)
         if image_response.status_code != 200:
-            logging.error(f"Failed to download image: {
-                          image_response.status_code}")
+            logging.error(
+                f"Failed to download image: {image_response.status_code}")
             return jsonify({'error': 'Failed to download image'}), 500
 
         # generate a unique image ID
