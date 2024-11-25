@@ -20,4 +20,36 @@
         </form>
     </div>
 </body>
+<script>
+    // generate or retrieve the user_id and created_at timestamp
+    let userId = localStorage.getItem('user_id');
+    const createdAt = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+
+    if (!userId) {
+        userId = crypto.randomUUID(); // generate a unique ID
+    }
+
+    localStorage.setItem('user_id', userId);
+    localStorage.setItem('created_at', createdAt);
+    console.log(`User ID: ${userId}`);
+    console.log(`Created At: ${createdAt}`);
+
+    // send the user_id and created_at timestamp to the server
+    fetch('/track-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, created_at: createdAt }) // date will be formatted in endpoint function
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            console.error(`Error tracking user: ${data.error}`);
+        } else {
+            console.log('User tracked successfully:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Failed to track user:', error);
+    });
+</script>
 </html>

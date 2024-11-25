@@ -12,6 +12,143 @@
         <h3>Feel free to select more than one. Downvote any you feel are inappropriate.</h3>
         <div id="imageContainer" class="image-grid"></div>
     </div>
-    <script src="{{ url_for('static', filename='index.js') }}"></script>
+    <script>
+        const currentDate = new Date().toISOString().split('T')[0]; // today's date in YYYY-MM-DD format
+        const imageContainer = document.getElementById('imageContainer');
+        let userVotes = JSON.parse(localStorage.getItem('userVotes')) || {}; // persist votes across sessions
+
+        // fetch images from today's date
+        async function fetchImages() {
+            try {
+                const response = await fetch(`/get-images?day=${currentDate}`);
+                const data = await response.json();
+
+                if (response.ok && data.images.length > 0) {
+                    renderImages(data.images);
+                } else {
+                    showMessage(data.message || "Looks like there were no images from today!");
+                }
+            } catch (error) {
+                console.error("Error fetching images:", error);
+                showMessage("Failed to fetch images. Please try again later.");
+            }
+        }
+
+        // render images in the grid
+        function renderImages(images) {
+            imageContainer.innerHTML = "";
+            images.forEach(image => {
+                const card = document.createElement('div');
+                card.className = "image-card";
+                const upvoted = userVotes[image.image_id] === 1; // check if the user has upvoted
+                const downvoted = userVotes[image.image_id] === -1; // check if the user has downvoted
+
+                card.innerHTML = `
+                    <div class="image-wrapper">
+                        <img src="https://pixelspatchwork.s3.amazonaws.com/${image.s3_path}" alt="${image.prompt_text}" loading="lazy">
+                    </div>
+                    <div class="vote-buttons">
+                        <button class="vote-button upvote ${upvoted ? 'active' : ''}" data-image="${image.image_id}" data-value="1">👍 ${image.upvotes}</button>
+                        <button class="vote-button downvote ${downvoted ? 'active' : ''}" data-image="${image.image_id}" data-value="-1">👎 ${image.downvotes}</button>
+                    </div>
+                `;
+                imageContainer.appendChild(card);
+
+                // add event listeners for voting
+                card.querySelectorAll('.vote-button').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const imageId = button.getAttribute('data-image');
+                        const voteValue = parseInt(button.getAttribute('data-value'));
+                        await handleVote(imageId, voteValue);
+                    });
+                });
+            });
+        }
+
+        // handle voting
+        async function handleVote(imageId, voteValue) {
+            const currentVote = userVotes[imageId] || 0; // current vote status (0, 1, -1)
+
+            // determine new vote status
+            let newVote = 0;
+            if (currentVote === voteValue) {
+                // unselect vote if the same button is clicked again
+                newVote = 0;
+            } else {
+                // apply new vote
+                newVote = voteValue;
+            }
+
+            try {
+                const response = await fetch('/vote-image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image_id: imageId, current_vote: currentVote, new_vote: newVote })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    userVotes[imageId] = newVote; // update the user's vote tracking
+                    localStorage.setItem('userVotes', JSON.stringify(userVotes)); // save to localStorage
+                    updateVoteUI(imageId, currentVote, newVote); // update the UI
+                } else {
+                    console.error(data.error);
+                    showMessage(data.error || "Failed to submit your vote.");
+                }
+            } catch (error) {
+                console.error("Error voting on image:", error);
+                showMessage("Failed to submit your vote. Please try again later.");
+            }
+        }
+
+        // update the UI after voting
+        function updateVoteUI(imageId, currentVote, newVote) {
+            const imageCard = document.querySelector(`.vote-button[data-image="${imageId}"]`).closest('.image-card');
+            const upvoteButton = imageCard.querySelector('.upvote');
+            const downvoteButton = imageCard.querySelector('.downvote');
+
+            let upvotes = parseInt(upvoteButton.textContent.trim().split(' ')[1]) || 0;
+            let downvotes = parseInt(downvoteButton.textContent.trim().split(' ')[1]) || 0;
+
+            // calculate changes
+            if (currentVote === 0 && newVote === 1) {
+                upvotes += 1;
+                upvoteButton.classList.add('active');
+            } else if (currentVote === 1 && newVote === 0) {
+                upvotes -= 1;
+                upvoteButton.classList.remove('active');
+            } else if (currentVote === 1 && newVote === -1) {
+                upvotes -= 1;
+                downvotes +=1;
+                upvoteButton.classList.remove('active');
+                downvoteButton.classList.add('active');
+            } else if (currentVote === 0 && newVote === -1) {
+                downvotes +=1;
+                downvoteButton.classList.add('active');
+            } else if (currentVote === -1 && newVote === 0) {
+                downvotes -=1;
+                downvoteButton.classList.remove('active');
+            } else if (currentVote === -1 && newVote === 1) {
+                downvotes -=1;
+                upvotes +=1;
+                downvoteButton.classList.remove('active');
+                upvoteButton.classList.add('active');
+            }
+
+            // update the button text
+            upvoteButton.innerHTML = `👍 ${upvotes}`;
+            downvoteButton.innerHTML = `👎 ${downvotes}`;
+        }
+
+        // show a message in the image container
+        function showMessage(message) {
+            imageContainer.innerHTML = `<div class="message">${message}</div>`;
+        }
+
+        // fetch images on page load
+        document.addEventListener("DOMContentLoaded", fetchImages);
+    </script>
 </body>
 </html>
