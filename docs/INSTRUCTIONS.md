@@ -1,3 +1,16 @@
+
+# Setup Instructions
+
+To get started with the project, follow these steps:
+
+1. **Clone the Repository**
+2. **Create a virtual environment**: python3 -m venv venv
+3. **Activate virtual environment**: source venv/bin/activate (for mac); .\venv\Scripts\activate (on windows)
+4. **Install required packages**: pip install -r requirements.txt
+5. **Set Up Environment Variables**: Create a .env file in the root directory of the project and add the necessary environment variables. You can use the .env.example file as a template.
+6. **Run the Flask app**: Use the command `python3 src/app.py` to start the Flask application.
+
+
 # Crowdsourced Image Evolution Platform
 
 Welcome to our collaborative crowdsourcing project! This system allows users to collectively evolve a seed image into more creative and “better” versions by typing prompts and voting on the results. Each day, the image with the highest votes becomes the new seed image for further transformations.
