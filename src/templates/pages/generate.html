@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generate a New Image</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
 </head>
@@ -11,12 +10,29 @@
         <div id="image-generator">
             <h1>Generate a New Image</h1>
             <h3>Please avoid generating more than 10 times. You may have to wait a few moments.</h3>
-            <img 
-                id="generated-image"
-                src="{{ url_for('static', filename='data/seed_image.jpg') }}" 
-                alt="Generated Image" 
-                style="display: block; margin: 1rem auto; width: 400px; height: auto;"
-            />
+            
+            <!-- display seed image -->
+            <div>
+                <h2>Today's Seed Image</h2>
+                <img 
+                    id="seed-image"
+                    src="{{ seed_image_url }}" 
+                    alt="Seed Image" 
+                    style="display: block; margin: 1rem auto; width: 400px; height: auto;"
+                />
+            </div>
+            
+            <!-- display generated image -->
+            <div>
+                <h2>Your Generated Image</h2>
+                <img 
+                    id="generated-image"
+                    src="{{ url_for('static', filename='data/placeholder.jpg') }}" 
+                    alt="Generated Image" 
+                    style="display: block; margin: 1rem auto; width: 400px; height: auto;"
+                />
+            </div>
+            
             <form id="generate-form">
                 <input 
                     type="text" 
@@ -26,8 +42,7 @@
                 />
                 <button type="submit" id="generate-button">Generate Image</button>
             </form>
-            <!-- Loading message -->
-            <div id="loading-message">Generating image, please wait...</div>
+            <div id="loading-message" style="display: none;">Generating image, please wait...</div>
             <button 
                 id="submit-button"
                 type="submit"
@@ -46,7 +61,7 @@
             prompt_text: null,
             created_at: createdAt,
             creator_id: localStorage.getItem('user_id'),
-            day: createdAt.split('T')[0],
+            day: createdAt.split(',')[0],
             upvotes: 0,
             downvotes: 0,
             flags: 0,
