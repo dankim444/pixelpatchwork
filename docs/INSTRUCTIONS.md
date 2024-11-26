@@ -19,7 +19,7 @@ Welcome to our collaborative crowdsourcing project! This system allows users to 
 
 ## How to Access
 
-- **Access Link**: http://127.0.0.1:5000/
+- **Access Link**: https://pixelspatchwork-1.onrender.com/
 
 No prerequisites or account setup are required. Just click the link and start contributing!
 
