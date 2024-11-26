@@ -57,8 +57,8 @@
         </ul>
         <hr>
         <form action="{{ url_for('generate') }}" method="get">
-            <button 
-                type="submit" 
+            <button
+                type="submit"
                 style="display: block; margin: 2rem auto;"
             >
                 Begin
@@ -67,35 +67,61 @@
     </div>
 </body>
 <script>
-    // generate or retrieve the user_id and created_at timestamp
-    let userId = localStorage.getItem('user_id');
-    const createdAt = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+    async function initializeUserTracking() {
+        let userId = localStorage.getItem('user_id');
+        const createdAt = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+        const isNewUser = !userId;
 
-    if (!userId) {
-        userId = crypto.randomUUID(); // generate a unique ID
+        if (isNewUser) {
+            userId = crypto.randomUUID();
+            
+            try {
+                // Track the visit only for new users
+                const visitResponse = await fetch('/track-visit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId })
+                });
+
+                if (!visitResponse.ok) {
+                    const data = await visitResponse.json();
+                    console.error(`Error tracking visit: ${data.error}`);
+                    return; // Exit if visit tracking fails
+                }
+
+                // If visit tracking succeeds, store user info
+                localStorage.setItem('user_id', userId);
+                localStorage.setItem('created_at', createdAt);
+                console.log('New user visit tracked successfully');
+            } catch (error) {
+                console.error('Failed to track visit:', error);
+                return;
+            }
+        }
+
+        // Always ensure user is tracked in the User table
+        try {
+            const userResponse = await fetch('/track-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    user_id: userId, 
+                    created_at: createdAt 
+                })
+            });
+
+            if (!userResponse.ok) {
+                const data = await userResponse.json();
+                console.error(`Error tracking user: ${data.error}`);
+            } else {
+                console.log('User tracked successfully');
+            }
+        } catch (error) {
+            console.error('Failed to track user:', error);
+        }
     }
 
-    localStorage.setItem('user_id', userId);
-    localStorage.setItem('created_at', createdAt);
-    console.log(`User ID: ${userId}`);
-    console.log(`Created At: ${createdAt}`);
-
-    // send the user_id and created_at timestamp to the server
-    fetch('/track-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, created_at: createdAt }) // date will be formatted in endpoint function
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            console.error(`Error tracking user: ${data.error}`);
-        } else {
-            console.log('User tracked successfully:', data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Failed to track user:', error);
-    });
+    // Call the function when the page loads
+    document.addEventListener('DOMContentLoaded', initializeUserTracking);
 </script>
 </html>

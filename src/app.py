@@ -34,7 +34,9 @@ def test():
 def generate():
     # get the seed image URL based on the day
     seed_image_url = get_seed_image()
-    return render_template('pages/generate.html', seed_image_url=seed_image_url)
+    return render_template(
+        'pages/generate.html',
+        seed_image_url=seed_image_url)
 
 
 @app.route('/vote')
@@ -352,21 +354,21 @@ def insert_image():
 
         cursor.execute("""
             INSERT INTO Image (
-                image_id, 
-                s3_path, 
-                prompt_text, 
+                image_id,
+                s3_path,
+                prompt_text,
                 created_at,
-                creator_id, 
-                day,  
-                upvotes, 
-                downvotes, 
+                creator_id,
+                day,
+                upvotes,
+                downvotes,
                 flags
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (image_id, s3_path, prompt_text, created_at, creator_id, day, upvotes, downvotes, flags))
 
         # update the Day record with the image_id
         cursor.execute("""
-            UPDATE Day 
+            UPDATE Day
             SET seed_image_id = %s
             WHERE date = %s AND seed_image_id IS NULL
         """, (image_id, day))
@@ -414,7 +416,8 @@ def get_images():
         if images:
             return jsonify({'images': images}), 200
         else:
-            return jsonify({'message': 'Looks like there were no images from today!'}), 200
+            return jsonify(
+                {'message': 'Looks like there were no images from today!'}), 200
 
     except Exception as e:
         logging.error(f"Error fetching images: {e}")
@@ -433,7 +436,8 @@ def vote_image():
     current_vote = data.get('current_vote')  # -1, 0, +1
     new_vote = data.get('new_vote')  # -1, 0, +1
 
-    if not image_id or current_vote not in [-1, 0, 1] or new_vote not in [-1, 0, 1]:
+    if not image_id or current_vote not in [-1,
+                                            0, 1] or new_vote not in [-1, 0, 1]:
         return jsonify({'error': 'Invalid image ID or vote values'}), 400
 
     try:
@@ -514,6 +518,77 @@ def proxy_image():
     except Exception as e:
         logging.error(f"Error proxying image: {e}")
         return 'Error fetching image', 500
+
+
+@app.route('/track-visit', methods=['POST'])
+def track_visit():
+    try:
+        db_conn = get_db_connection()
+        cursor = db_conn.cursor()
+
+        # Get today's date
+        today = datetime.now().strftime('%Y-%m-%d')
+        logging.info(f"Tracking visit for date: {today}")
+
+        # Increment total_participants for the current day
+        cursor.execute("""
+            UPDATE Day SET total_participants = total_participants + 1
+            WHERE date = %s
+        """, (today,))
+        db_conn.commit()
+
+        logging.info("Total participants incremented successfully")
+        return jsonify({'message': 'Participant tracked successfully'}), 200
+
+    except Exception as e:
+        logging.error(f"Error tracking participant: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to track participant'}), 500
+
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'db_conn' in locals():
+            db_conn.close()
+
+
+@app.route('/update-vote-count', methods=['POST'])
+def update_vote_count():
+    data = request.get_json()
+    # +1 for upvote/downvote, -1 for deselect
+    increment = data.get('increment')
+    if increment not in [1, -1]:
+        return jsonify({'error': 'Invalid vote increment'}), 400
+
+    try:
+        db_conn = get_db_connection()
+        cursor = db_conn.cursor()
+
+        # Get today's date
+        today = datetime.now().strftime('%Y-%m-%d')
+        logging.info(
+            f"Updating total_votes for date: {today} "
+            f"with increment: {increment}"
+        )
+
+        # Update total_votes for the current day
+        cursor.execute("""
+            UPDATE Day SET total_votes = total_votes + %s
+            WHERE date = %s
+        """, (increment, today))
+        db_conn.commit()
+
+        logging.info("Total votes updated successfully")
+        return jsonify({'message': 'Vote count updated successfully'}), 200
+
+    except Exception as e:
+        logging.error(f"Error updating vote count: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to update vote count'}), 500
+
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'db_conn' in locals():
+            db_conn.close()
 
 
 if __name__ == '__main__':
