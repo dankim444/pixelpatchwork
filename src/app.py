@@ -1,7 +1,8 @@
 import logging
 from flask_cors import CORS
-from flask import request, jsonify, Flask, render_template, url_for
+from flask import request, jsonify, Flask, render_template, url_for, Response
 import sys
+import os
 import uuid
 from config import *
 from datetime import datetime
@@ -88,7 +89,9 @@ def get_seed_image():
             image_row = cursor.fetchone()
             if image_row:
                 s3_path = image_row['s3_path']
-                seed_image_url = f"https://{bucket_name}.s3.amazonaws.com/{s3_path}"
+                # use the proxy URL instead of direct S3 URL - addresses CORS issue
+                seed_image_url = f"/proxy-image?url=https://{
+                    bucket_name}.s3.amazonaws.com/{s3_path}"
                 return seed_image_url
 
         # if no previous images or error, return default seed image
@@ -149,6 +152,9 @@ def generate_image_endpoint():
     data = request.get_json()
     prompt = data.get('prompt')
     mask_data_url = data.get('mask')  # Base64 encoded mask image
+    seed_image_url = data.get('seedImage')
+
+    logging.info(f"Seed image URL received: {seed_image_url}")
 
     if not prompt:
         logging.warning("Prompt is missing in the request")
@@ -158,6 +164,10 @@ def generate_image_endpoint():
         logging.warning("Mask is missing in the request")
         return jsonify({'error': 'Mask is required'}), 400
 
+    if not seed_image_url:
+        logging.warning("Seed image is missing in the request")
+        return jsonify({'error': 'Seed image is required'}), 400
+
     try:
         # validate credentials
         validate_env()
@@ -165,26 +175,60 @@ def generate_image_endpoint():
         # set up OpenAI API key
         openai.api_key = OPENAI_API_KEY
 
-        # get the seed image
-        seed_image_url = get_seed_image()
-        seed_image_response = requests.get(seed_image_url)
-        if seed_image_response.status_code != 200:
-            logging.error(f"Failed to download seed image: {
-                          seed_image_response.status_code}")
-            return jsonify({'error': 'Failed to download seed image'}), 500
+        # determine if we're using a static image or S3 image
+        if 'static/data/seed_image.jpg' in seed_image_url:
+            # handle static image case
+            logging.info("Using static seed image")
+            static_file_path = os.path.join(
+                app.static_folder, 'data', 'seed_image.jpg')
+            with open(static_file_path, 'rb') as f:
+                seed_image_data = f.read()
+        else:
+            # handle S3 image case
+            logging.info("Using S3 seed image")
+            # fix the path extraction - remove the proxy part
+            if '/proxy-image?url=' in seed_image_url:
+                s3_path = seed_image_url.split(
+                    '/proxy-image?url=https://' + bucket_name + '.s3.amazonaws.com/')[-1]
+            else:
+                s3_path = seed_image_url.split('amazonaws.com/')[-1]
 
-        # convert seed image to PIL Image
-        seed_image = Image.open(
-            BytesIO(seed_image_response.content)).convert("RGBA")
+            logging.info(f"Extracted S3 path: {s3_path}")
+
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id=AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+            )
+
+            try:
+                response = s3_client.get_object(
+                    Bucket=bucket_name,
+                    Key=s3_path
+                )
+                seed_image_data = response['Body'].read()
+            except s3_client.exceptions.NoSuchKey:
+                logging.error(f"Could not find S3 object with key: {s3_path}")
+                return jsonify({'error': 'Could not find seed image'}), 404
+
+        # Process seed image
+        seed_image = Image.open(BytesIO(seed_image_data)).convert(
+            "RGBA")  # OpenAI requires RGB
 
         # decode mask image from base64
         header, encoded = mask_data_url.split(",", 1)
         mask_data = base64.b64decode(encoded)
         mask_image = Image.open(BytesIO(mask_data)).convert("RGBA")
 
+        # extract alpha channel for mask and convert to RGB (white for transparent areas)
+        alpha = mask_image.split()[3]
+        mask_rgba = Image.new('RGBA', mask_image.size, (0, 0, 0, 255))
+        mask_rgba.paste(Image.new('RGBA', mask_image.size,
+                        (255, 255, 255, 255)), mask=alpha)
+
         # ensure both images are the same size
         seed_image = seed_image.resize((512, 512))
-        mask_image = mask_image.resize((512, 512))
+        mask_rgba = mask_rgba.resize((512, 512))
 
         # save images to temporary files
         seed_image_file = BytesIO()
@@ -192,7 +236,7 @@ def generate_image_endpoint():
         seed_image_file.seek(0)
 
         mask_image_file = BytesIO()
-        mask_image.save(mask_image_file, format='PNG')
+        mask_rgba.save(mask_image_file, format='PNG')
         mask_image_file.seek(0)
 
         # use OpenAI's images.edit() method
@@ -205,14 +249,14 @@ def generate_image_endpoint():
         )
         logging.info("Image edited successfully using OpenAI's API.")
 
-        # extract url
         image_url = response.data[0].url
         logging.info(f"Image URL: {image_url}")
 
         # download image
         image_response = requests.get(image_url)
         if image_response.status_code != 200:
-            logging.error(f"Failed to download image: {image_response.status_code}")
+            logging.error(f"Failed to download image: {
+                          image_response.status_code}")
             return jsonify({'error': 'Failed to download image'}), 500
 
         # generate a unique image ID
@@ -448,6 +492,43 @@ def vote_image():
             cursor.close()
         if 'db_conn' in locals():
             db_conn.close()
+
+
+@app.route('/proxy-image')
+def proxy_image():
+    image_url = request.args.get('url')
+    if not image_url:
+        return 'No URL provided', 400
+
+    try:
+        # parse the S3 path from the full URL
+        s3_path = image_url.split('amazonaws.com/')[-1].split('?')[0]
+
+        # get the image from S3
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
+
+        response = s3_client.get_object(
+            Bucket=bucket_name,
+            Key=s3_path
+        )
+
+        # return the image with proper headers
+        return Response(
+            response['Body'].read(),
+            mimetype='image/png',
+            headers={
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        )
+    except Exception as e:
+        logging.error(f"Error proxying image: {e}")
+        return 'Error fetching image', 500
 
 
 if __name__ == '__main__':

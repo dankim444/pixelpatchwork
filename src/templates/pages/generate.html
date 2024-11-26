@@ -73,28 +73,45 @@
         const canvas = document.getElementById('seed-canvas');
         const ctx = canvas.getContext('2d');
         const seedImageUrl = "{{ seed_image_url }}";
-        //const seedImageUrl = "https://picsum.photos/512";
 
-        const seedImage = new Image();
-        seedImage.crossOrigin = "anonymous"; // handle CORS issue
-        seedImage.onload = function() {
-            console.log("Seed image loaded successfully.");
-            console.log("Image Dimensions:", seedImage.width, seedImage.height);
-            console.log("Canvas Dimensions:", canvas.width, canvas.height);
-            // draw seed image onto canvas
-            ctx.drawImage(seedImage, 0, 0, canvas.width, canvas.height);
-        };
-        seedImage.onerror = function(e) {
-            console.error("Failed to load seed image.", e);
-        };
-        seedImage.src = seedImageUrl;
+        // load the seed image with proper error handling
+        function loadSeedImage() {
+            const seedImage = new Image();
+            seedImage.crossOrigin = "anonymous";
+            
+            seedImage.onload = function() {
+                console.log("Seed image loaded successfully.");
+                console.log("Image Dimensions:", seedImage.width, seedImage.height);
+                console.log("Canvas Dimensions:", canvas.width, canvas.height);
+                
+                // Clear canvas before drawing
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // draw seed image onto canvas
+                ctx.drawImage(seedImage, 0, 0, canvas.width, canvas.height);
+                
+                // Reset composite operation for drawing
+                ctx.globalCompositeOperation = 'destination-out';
+            };
+
+            seedImage.onerror = function(e) {
+                console.error("Error loading seed image:", e);
+                // Fallback to a colored rectangle if image fails to load
+                ctx.fillStyle = '#cccccc';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            };
+
+            // Add cache-busting parameter to prevent caching issues
+            seedImage.src = seedImageUrl + '?t=' + new Date().getTime();
+        }
+
+        // Initialize the canvas with the seed image
+        loadSeedImage();
 
         // drawing variables
         let isDrawing = false;
         ctx.lineWidth = 25;
         ctx.lineCap = 'round';
         ctx.strokeStyle = 'white';
-        ctx.globalCompositeOperation = 'destination-out';
 
         // event listeners for drawing
         canvas.addEventListener('mousedown', startDrawing);
@@ -116,7 +133,14 @@
                 x = e.clientX - rect.left;
                 y = e.clientY - rect.top;
             }
-            return { x, y };
+            
+            // Scale the coordinates if the canvas is rendered at a different size
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return { 
+                x: x * scaleX, 
+                y: y * scaleY 
+            };
         }
 
         function startDrawing(e) {
@@ -144,12 +168,26 @@
 
         // clear mask button
         document.getElementById('clear-mask').addEventListener('click', () => {
-            // Clear the canvas and redraw the seed image
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.globalCompositeOperation = 'source-over';
-            ctx.drawImage(seedImage, 0, 0, canvas.width, canvas.height);
-            ctx.globalCompositeOperation = 'destination-out';
-        });
+            
+            const seedImage = new Image();
+            seedImage.crossOrigin = "anonymous";
+            
+            seedImage.onload = function() {
+                ctx.drawImage(seedImage, 0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'destination-out';
+            };
+
+            seedImage.onerror = function(e) {
+                console.error("Error reloading seed image:", e);
+                ctx.fillStyle = '#cccccc';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            };
+
+            // add cache-busting parameter to prevent caching issues
+            seedImage.src = seedImageUrl + '?t=' + new Date().getTime();
+});
 
         // generate image
         document.getElementById('generate-form').addEventListener('submit', async (e) => {
@@ -172,13 +210,20 @@
             // get the mask image data
             const maskDataUrl = canvas.toDataURL('image/png');
 
+            // convert relative URL to absolute URL for the seed image
+            const absoluteSeedImageUrl = new URL(seedImageUrl, window.location.origin).href;
+
             try {
                 const response = await fetch('/generate-image', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ prompt, mask: maskDataUrl })
+                    body: JSON.stringify({ 
+                        prompt, 
+                        mask: maskDataUrl,
+                        seedImage: absoluteSeedImageUrl
+                    })
                 });
 
                 const data = await response.json();
