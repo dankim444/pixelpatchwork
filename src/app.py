@@ -88,8 +88,7 @@ def get_seed_image():
             image_row = cursor.fetchone()
             if image_row:
                 s3_path = image_row['s3_path']
-                seed_image_url = f"https://{
-                    bucket_name}.s3.amazonaws.com/{s3_path}"
+                seed_image_url = f"https://{bucket_name}.s3.amazonaws.com/{s3_path}"
                 return seed_image_url
 
         # if no previous images or error, return default seed image
@@ -213,8 +212,7 @@ def generate_image_endpoint():
         # download image
         image_response = requests.get(image_url)
         if image_response.status_code != 200:
-            logging.error(f"Failed to download image: {
-                          image_response.status_code}")
+            logging.error(f"Failed to download image: {image_response.status_code}")
             return jsonify({'error': 'Failed to download image'}), 500
 
         # generate a unique image ID
