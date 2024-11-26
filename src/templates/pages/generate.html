@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Generate a New Image</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
 </head>
@@ -10,16 +11,15 @@
         <div id="image-generator">
             <h1>Generate a New Image</h1>
             <h3>Please avoid generating more than 10 times. You may have to wait a few minutes.</h3>
+            <p>The transparent areas of the mask indicate where the image should be edited, and the prompt should describe the full new image, <strong>not just the erased area.</strong></p>
+            <p>You will need to play around with the prompt a few times to get the output you want. Get creative!</strong></p>
             
-            <!-- display seed image -->
+            <!-- display seed image on a canvas for masking -->
             <div>
                 <h2>Today's Seed Image</h2>
-                <img 
-                    id="seed-image"
-                    src="{{ seed_image_url }}" 
-                    alt="Seed Image" 
-                    style="display: block; margin: 1rem auto; width: 400px; height: auto;"
-                />
+                <canvas id="seed-canvas" width="512" height="512"></canvas>
+                <p>Use your mouse to draw a mask over the seed image (areas to be modified).</p>
+                <button type="submit" id="clear-mask">Clear Mask</button>
             </div>
             
             <!-- display generated image -->
@@ -27,9 +27,9 @@
                 <h2>Your Generated Image</h2>
                 <img 
                     id="generated-image"
-                    src="{{ url_for('static', filename='data/placeholder.jpg') }}" 
+                    src="{{ url_for('static', filename='data/img-icon.png') }}" 
                     alt="Generated Image" 
-                    style="display: block; margin: 1rem auto; width: 400px; height: auto;"
+                    style="display: block; margin: 1rem auto; width: 512px; height: auto;"
                 />
             </div>
             
@@ -71,6 +71,109 @@
         let generateCount = parseInt(localStorage.getItem('generateCount')) || 0;
         const maxGenerates = 10;
 
+        // initialize canvas and load seed image
+        const canvas = document.getElementById('seed-canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const seedImageUrl = "{{ seed_image_url }}";
+
+        // load the seed image with proper error handling
+        function loadSeedImage() {
+            const seedImage = new Image();
+            seedImage.crossOrigin = "anonymous";
+            
+            seedImage.onload = function() {
+                console.log("Seed image loaded successfully.");
+                console.log("Image Dimensions:", seedImage.width, seedImage.height);
+                console.log("Canvas Dimensions:", canvas.width, canvas.height);
+                
+                // clear canvas before drawing
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'source-over';
+
+                // draw seed image onto canvas
+                ctx.drawImage(seedImage, 0, 0, canvas.width, canvas.height);
+                
+                // reset composite operation for drawing
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.strokeStyle = 'rgba(0, 0, 0, 1)'; // Solid black for erasing
+            };
+
+            seedImage.onerror = function(e) {
+                console.error("Error loading seed image:", e);
+                ctx.fillStyle = '#cccccc';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            };
+
+            // add cache-busting parameter to prevent caching issues
+            seedImage.src = seedImageUrl + '?t=' + new Date().getTime();
+        }
+
+        // initialize the canvas with the seed image
+        loadSeedImage();
+
+        // drawing variables
+        let isDrawing = false;
+        ctx.lineWidth = 25;
+        ctx.lineCap = 'round';
+
+        // event listeners for drawing
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseleave', stopDrawing);
+
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchmove', draw);
+
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            let x, y;
+            if (e.touches && e.touches.length > 0) {
+                x = e.touches[0].clientX - rect.left;
+                y = e.touches[0].clientY - rect.top;
+            } else {
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
+            }
+            
+            // scale the coordinates if the canvas is rendered at a different size
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return { 
+                x: x * scaleX, 
+                y: y * scaleY 
+            };
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+            e.preventDefault();
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const pos = getPos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            e.preventDefault();
+        }
+
+        function stopDrawing(e) {
+            if (!isDrawing) return;
+            ctx.closePath();
+            isDrawing = false;
+            e.preventDefault();
+        }
+
+        // clear mask button
+        document.getElementById('clear-mask').addEventListener('click', () => {
+            loadSeedImage();
+        });
+
         // generate image
         document.getElementById('generate-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -82,12 +185,17 @@
             }
 
             const prompt = document.getElementById('prompt').value;
-
-            // show loading message and disable generate button
             const loadingMessage = document.getElementById('loading-message');
             loadingMessage.style.display = 'block';
             const generateButton = document.getElementById('generate-button');
             generateButton.disabled = true;
+
+            // get the mask image data
+            const maskDataUrl = canvas.toDataURL('image/png', 1.0);
+            console.log('mask data url: ', maskDataUrl);
+
+            // convert relative URL to absolute URL for the seed image
+            const absoluteSeedImageUrl = new URL(seedImageUrl, window.location.origin).href;
 
             try {
                 const response = await fetch('/generate-image', {
@@ -95,7 +203,11 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ prompt })
+                    body: JSON.stringify({ 
+                        prompt, 
+                        mask: maskDataUrl,
+                        seedImage: absoluteSeedImageUrl
+                    })
                 });
 
                 const data = await response.json();

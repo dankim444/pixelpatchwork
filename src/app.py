@@ -1,7 +1,8 @@
 import logging
 from flask_cors import CORS
-from flask import request, jsonify, Flask, render_template, url_for
+from flask import request, jsonify, Flask, render_template, url_for, Response
 import sys
+import os
 import uuid
 from config import *
 from datetime import datetime
@@ -9,6 +10,9 @@ import mysql.connector
 import boto3
 import requests
 import openai
+import base64
+from io import BytesIO
+from PIL import Image
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
@@ -17,6 +21,8 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 CORS(app)
 bucket_name = 'pixelspatchwork'
+
+### routes for pages ###
 
 
 @app.route('/')
@@ -43,6 +49,8 @@ def goodbye():
     return render_template('pages/goodbye.html')
 
 
+### helper functions ###
+
 def get_db_connection():
     """Create a connection to the RDS database"""
     return mysql.connector.connect(
@@ -55,15 +63,12 @@ def get_db_connection():
 
 
 def get_seed_image():
-    """Determine the seed image to display based on the day"""
+    """Get the seed image URL for the current day or default seed image."""
     try:
         db_conn = get_db_connection()
         cursor = db_conn.cursor(dictionary=True)
 
-        logging.info(f"Database successfully connected")
-
         today = datetime.now().date()
-        logging.info(f"Today's date: {today}")
 
         # check if there are any previous days with images
         cursor.execute("""
@@ -86,18 +91,21 @@ def get_seed_image():
             image_row = cursor.fetchone()
             if image_row:
                 s3_path = image_row['s3_path']
-                seed_image_url = (
-                    f"https://{bucket_name}.s3.amazonaws.com/{s3_path}")
+                # use the proxy URL instead of direct S3 URL - addresses CORS issue
+                seed_image_url = f"/proxy-image?url=https://{
+                    bucket_name}.s3.amazonaws.com/{s3_path}"
                 return seed_image_url
 
         # if no previous images or error, return default seed image
-        seed_image_url = url_for('static', filename='data/seed_image.jpg')
+        seed_image_url = url_for(
+            'static', filename='data/seed_image.jpg', _external=True)
         return seed_image_url
 
     except Exception as e:
         logging.error(f"Error fetching seed image: {e}")
         # return default seed image in case of error
-        seed_image_url = url_for('static', filename='data/seed_image.jpg')
+        seed_image_url = url_for(
+            'static', filename='data/seed_image.jpg', _external=True)
         return seed_image_url
 
     finally:
@@ -136,54 +144,117 @@ def insert_day(image_id, today):
             db_conn.close()
 
 
+def process_mask_for_dalle(mask_data_url):
+    """
+    Process a mask from canvas data URL into the format DALL-E 2 expects:
+    - Transparent (alpha=0) for areas to edit
+    - Solid black (alpha=255) for areas to preserve
+    Returns mask in RGBA format
+    """
+    # Decode mask image from base64
+    header, encoded = mask_data_url.split(",", 1)
+    mask_data = base64.b64decode(encoded)
+    mask_image = Image.open(BytesIO(mask_data)).convert("RGBA")
+
+    # Get alpha channel
+    alpha = mask_image.split()[3]
+
+    # Create new RGBA image
+    # Solid black with full alpha
+    final_mask = Image.new('RGBA', mask_image.size, (0, 0, 0, 255))
+
+    # Create white areas with zero alpha where user drew
+    transparent_areas = Image.new('RGBA', mask_image.size, (0, 0, 0, 0))
+    final_mask.paste(transparent_areas, mask=Image.eval(
+        alpha, lambda x: 255 if x == 0 else 0))
+
+    return final_mask
+
+
+### endpoints ###
+
 @app.route('/generate-image', methods=['POST'])
 def generate_image_endpoint():
     logging.info("Endpoint /generate-image was hit")
 
-    # extract the prompt from the request
     data = request.get_json()
     prompt = data.get('prompt')
-    if not prompt:
-        logging.warning("Prompt is missing in the request")
-        return jsonify({'error': 'Prompt is required'}), 400
+    mask_data_url = data.get('mask')
+    seed_image_url = data.get('seedImage')
+
+    if not all([prompt, mask_data_url, seed_image_url]):
+        return jsonify({'error': 'Missing required parameters'}), 400
 
     try:
         # validate credentials
         validate_env()
-
-        # set up OpenAI API key
         openai.api_key = OPENAI_API_KEY
 
-        # generate image with prompt
-        response = openai.images.generate(
+        # get seed image
+        if 'static/data/seed_image.jpg' in seed_image_url:
+            static_file_path = os.path.join(app.static_folder, 'data', 'seed_image.jpg')
+            with open(static_file_path, 'rb') as f:
+                seed_image_data = f.read()
+        else:
+            s3_path = seed_image_url.split('/proxy-image?url=https://' + bucket_name + '.s3.amazonaws.com/')[-1]
+            s3_client = boto3.client('s3',
+                aws_access_key_id=AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+            )
+            response = s3_client.get_object(Bucket=bucket_name, Key=s3_path)
+            seed_image_data = response['Body'].read()
+
+        # process seed image (keep as RGBA)
+        seed_image = Image.open(BytesIO(seed_image_data)).convert("RGBA")
+        seed_image = seed_image.resize((512, 512))
+
+        # process mask image
+        mask_image = process_mask_for_dalle(mask_data_url)
+        mask_image = mask_image.resize((512, 512))
+
+        # for debugging - save the images to see what they look like
+        # debug = False
+        # if debug:
+        #     seed_image.save('debug_seed.png')
+        #     mask_image.save('debug_mask.png')
+
+        # save images to bytes
+        seed_bytes = BytesIO()
+        mask_bytes = BytesIO()
+        
+        seed_image.save(seed_bytes, format='PNG')
+        mask_image.save(mask_bytes, format='PNG')
+        
+        seed_bytes.seek(0)
+        mask_bytes.seek(0)
+
+        # call DALL-E 2 API
+        response = openai.images.edit(
+            model="dall-e-2",
+            image=seed_bytes,
+            mask=mask_bytes,
             prompt=prompt,
             n=1,
-            size="1024x1024"
+            size="512x512"
         )
-        logging.info("Image generated successfully using OpenAI's API.")
 
-        # extract url
+        # process response and save to S3
         image_url = response.data[0].url
-        logging.info(f"Image URL: {image_url}")
+        logging.info(f"Generated image URL: {image_url}")
 
-        # download image
+        # download generated image
         image_response = requests.get(image_url)
         if image_response.status_code != 200:
-            logging.error(
-                f"Failed to download image: {image_response.status_code}")
-            return jsonify({'error': 'Failed to download image'}), 500
+            raise Exception(f"Failed to download generated image: {image_response.status_code}")
 
-        # generate a unique image ID
+        # generate unique ID and S3 path
         image_id = str(uuid.uuid4())
-
-        # define the S3 path
         created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         today = datetime.now().strftime('%Y-%m-%d')
         s3_path = f'daily-submissions/{today}/{image_id}.png'
 
-        # upload the image to S3
-        s3_client = boto3.client(
-            's3',
+        # upload to S3
+        s3_client = boto3.client('s3',
             aws_access_key_id=AWS_ACCESS_KEY_ID,
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY
         )
@@ -193,24 +264,25 @@ def generate_image_endpoint():
             Body=image_response.content,
             ContentType='image/png',
         )
-        logging.info(f"Image uploaded successfully to S3: {s3_path}")
 
-        # insert the image and day record into the database
-        logging.info(f"WHAT IS TODAYYYYYYY: {today}")
+        # insert day record
         insert_day(image_id, today)
 
-        # return the image information
+        # return success response
         full_image_url = f"https://{bucket_name}.s3.amazonaws.com/{s3_path}"
-        return jsonify({'imageUrl': full_image_url, 'image_id': image_id,
-                       'day': today, 'created_at': created_at}), 200
-
+        return jsonify({
+            'imageUrl': full_image_url,
+            'image_id': image_id,
+            'day': today,
+            'created_at': created_at
+        }), 200
+        
     except openai.OpenAIError as e:
         logging.error(f"OpenAI API error: {e}")
-        return jsonify({'error': 'Failed to generate image'}), 500
-
+        return jsonify({'error': str(e)}), 500
     except Exception as e:
-        logging.error(f"Unexpected error: {e}")
-        return jsonify({'error': 'Failed to generate image'}), 500
+        logging.error(f"Error in generate_image_endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/track-user', methods=['POST'])
@@ -409,6 +481,43 @@ def vote_image():
             cursor.close()
         if 'db_conn' in locals():
             db_conn.close()
+
+
+@app.route('/proxy-image')
+def proxy_image():
+    image_url = request.args.get('url')
+    if not image_url:
+        return 'No URL provided', 400
+
+    try:
+        # parse the S3 path from the full URL
+        s3_path = image_url.split('amazonaws.com/')[-1].split('?')[0]
+
+        # get the image from S3
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+        )
+
+        response = s3_client.get_object(
+            Bucket=bucket_name,
+            Key=s3_path
+        )
+
+        # return the image with proper headers
+        return Response(
+            response['Body'].read(),
+            mimetype='image/png',
+            headers={
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        )
+    except Exception as e:
+        logging.error(f"Error proxying image: {e}")
+        return 'Error fetching image', 500
 
 
 @app.route('/track-visit', methods=['POST'])
