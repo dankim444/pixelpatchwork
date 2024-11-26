@@ -11,16 +11,18 @@
         <div id="image-generator">
             <h1>Generate a New Image</h1>
             <h3>Please avoid generating more than 10 times. You may have to wait a few minutes.</h3>
+            <p>The transparent areas of the mask indicate where the image should be edited, and the prompt should describe the full new image, <strong>not just the erased area.</strong></p>
+            <p>You will need to play around with the prompt a few times to get the output you want. Get creative!</strong></p>
             
-            <!-- Display seed image on a canvas for masking -->
+            <!-- display seed image on a canvas for masking -->
             <div>
                 <h2>Today's Seed Image</h2>
                 <canvas id="seed-canvas" width="512" height="512"></canvas>
-                <p>Use the brush to draw a mask over the seed image (areas to be modified).</p>
+                <p>Use your mouse to draw a mask over the seed image (areas to be modified).</p>
                 <button type="submit" id="clear-mask">Clear Mask</button>
             </div>
             
-            <!-- Display generated image -->
+            <!-- display generated image -->
             <div>
                 <h2>Your Generated Image</h2>
                 <img 
@@ -71,7 +73,7 @@
 
         // initialize canvas and load seed image
         const canvas = document.getElementById('seed-canvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const seedImageUrl = "{{ seed_image_url }}";
 
         // load the seed image with proper error handling
@@ -84,34 +86,35 @@
                 console.log("Image Dimensions:", seedImage.width, seedImage.height);
                 console.log("Canvas Dimensions:", canvas.width, canvas.height);
                 
-                // Clear canvas before drawing
+                // clear canvas before drawing
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'source-over';
+
                 // draw seed image onto canvas
                 ctx.drawImage(seedImage, 0, 0, canvas.width, canvas.height);
                 
-                // Reset composite operation for drawing
+                // reset composite operation for drawing
                 ctx.globalCompositeOperation = 'destination-out';
+                ctx.strokeStyle = 'rgba(0, 0, 0, 1)'; // Solid black for erasing
             };
 
             seedImage.onerror = function(e) {
                 console.error("Error loading seed image:", e);
-                // Fallback to a colored rectangle if image fails to load
                 ctx.fillStyle = '#cccccc';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             };
 
-            // Add cache-busting parameter to prevent caching issues
+            // add cache-busting parameter to prevent caching issues
             seedImage.src = seedImageUrl + '?t=' + new Date().getTime();
         }
 
-        // Initialize the canvas with the seed image
+        // initialize the canvas with the seed image
         loadSeedImage();
 
         // drawing variables
         let isDrawing = false;
         ctx.lineWidth = 25;
         ctx.lineCap = 'round';
-        ctx.strokeStyle = 'white';
 
         // event listeners for drawing
         canvas.addEventListener('mousedown', startDrawing);
@@ -134,7 +137,7 @@
                 y = e.clientY - rect.top;
             }
             
-            // Scale the coordinates if the canvas is rendered at a different size
+            // scale the coordinates if the canvas is rendered at a different size
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
             return { 
@@ -168,26 +171,8 @@
 
         // clear mask button
         document.getElementById('clear-mask').addEventListener('click', () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.globalCompositeOperation = 'source-over';
-            
-            const seedImage = new Image();
-            seedImage.crossOrigin = "anonymous";
-            
-            seedImage.onload = function() {
-                ctx.drawImage(seedImage, 0, 0, canvas.width, canvas.height);
-                ctx.globalCompositeOperation = 'destination-out';
-            };
-
-            seedImage.onerror = function(e) {
-                console.error("Error reloading seed image:", e);
-                ctx.fillStyle = '#cccccc';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-            };
-
-            // add cache-busting parameter to prevent caching issues
-            seedImage.src = seedImageUrl + '?t=' + new Date().getTime();
-});
+            loadSeedImage();
+        });
 
         // generate image
         document.getElementById('generate-form').addEventListener('submit', async (e) => {
@@ -200,15 +185,14 @@
             }
 
             const prompt = document.getElementById('prompt').value;
-
-            // show loading message and disable generate button
             const loadingMessage = document.getElementById('loading-message');
             loadingMessage.style.display = 'block';
             const generateButton = document.getElementById('generate-button');
             generateButton.disabled = true;
 
             // get the mask image data
-            const maskDataUrl = canvas.toDataURL('image/png');
+            const maskDataUrl = canvas.toDataURL('image/png', 1.0);
+            console.log('mask data url: ', maskDataUrl);
 
             // convert relative URL to absolute URL for the seed image
             const absoluteSeedImageUrl = new URL(seedImageUrl, window.location.origin).href;
