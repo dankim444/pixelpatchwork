@@ -92,8 +92,7 @@ def get_seed_image():
             if image_row:
                 s3_path = image_row['s3_path']
                 # use the proxy URL instead of direct S3 URL - addresses CORS issue
-                seed_image_url = f"/proxy-image?url=https://{
-                    bucket_name}.s3.amazonaws.com/{s3_path}"
+                seed_image_url = f"/proxy-image?url=https://{bucket_name}.s3.amazonaws.com/{s3_path}"
                 return seed_image_url
 
         # if no previous images or error, return default seed image
