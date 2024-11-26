@@ -73,11 +73,14 @@
         const canvas = document.getElementById('seed-canvas');
         const ctx = canvas.getContext('2d');
         const seedImageUrl = "{{ seed_image_url }}";
+        //const seedImageUrl = "https://picsum.photos/512";
 
         const seedImage = new Image();
         seedImage.crossOrigin = "anonymous"; // handle CORS issue
         seedImage.onload = function() {
             console.log("Seed image loaded successfully.");
+            console.log("Image Dimensions:", seedImage.width, seedImage.height);
+            console.log("Canvas Dimensions:", canvas.width, canvas.height);
             // draw seed image onto canvas
             ctx.drawImage(seedImage, 0, 0, canvas.width, canvas.height);
         };
