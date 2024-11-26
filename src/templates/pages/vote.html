@@ -74,20 +74,21 @@
 
             // determine new vote status
             let newVote = 0;
+            let increment = 0; // track vote count change
             if (currentVote === voteValue) {
                 // unselect vote if the same button is clicked again
                 newVote = 0;
+                increment = -1; // decrement total_votes
             } else {
                 // apply new vote
                 newVote = voteValue;
+                increment = currentVote === 0 ? 1 : 0; // increment total_votes only for new votes
             }
 
             try {
                 const response = await fetch('/vote-image', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ image_id: imageId, current_vote: currentVote, new_vote: newVote })
                 });
 
@@ -96,6 +97,9 @@
                     userVotes[imageId] = newVote; // update the user's vote tracking
                     localStorage.setItem('userVotes', JSON.stringify(userVotes)); // save to localStorage
                     updateVoteUI(imageId, currentVote, newVote); // update the UI
+
+                    // Increment or decrement total_votes
+                    updateTotalVotes(increment);
                 } else {
                     console.error(data.error);
                     showMessage(data.error || "Failed to submit your vote.");
@@ -124,18 +128,18 @@
                 upvoteButton.classList.remove('active');
             } else if (currentVote === 1 && newVote === -1) {
                 upvotes -= 1;
-                downvotes +=1;
+                downvotes += 1;
                 upvoteButton.classList.remove('active');
                 downvoteButton.classList.add('active');
             } else if (currentVote === 0 && newVote === -1) {
-                downvotes +=1;
+                downvotes += 1;
                 downvoteButton.classList.add('active');
             } else if (currentVote === -1 && newVote === 0) {
-                downvotes -=1;
+                downvotes -= 1;
                 downvoteButton.classList.remove('active');
             } else if (currentVote === -1 && newVote === 1) {
-                downvotes -=1;
-                upvotes +=1;
+                downvotes -= 1;
+                upvotes += 1;
                 downvoteButton.classList.remove('active');
                 upvoteButton.classList.add('active');
             }
@@ -143,6 +147,26 @@
             // update the button text
             upvoteButton.innerHTML = `👍 ${upvotes}`;
             downvoteButton.innerHTML = `👎 ${downvotes}`;
+        }
+
+        // Update total_votes in the backend
+        async function updateTotalVotes(increment) {
+            try {
+                const response = await fetch('/update-vote-count', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ increment })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    console.error(data.error);
+                } else {
+                    console.log('Total votes updated successfully:', data.message);
+                }
+            } catch (error) {
+                console.error("Error updating total votes:", error);
+            }
         }
 
         // show a message in the image container
