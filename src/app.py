@@ -91,8 +91,10 @@ def get_seed_image():
             image_row = cursor.fetchone()
             if image_row:
                 s3_path = image_row['s3_path']
-                # use the proxy URL instead of direct S3 URL - addresses CORS issue
-                seed_image_url = f"/proxy-image?url=https://{bucket_name}.s3.amazonaws.com/{s3_path}"
+                # use the proxy URL instead of direct S3 URL - addresses CORS
+                # issue
+                seed_image_url = (
+                    f"/proxy-image?url=https://{bucket_name}.s3.amazonaws.com/{s3_path}")
                 return seed_image_url
 
         # if no previous images or error, return default seed image
@@ -191,15 +193,17 @@ def generate_image_endpoint():
 
         # get seed image
         if 'static/data/seed_image.jpg' in seed_image_url:
-            static_file_path = os.path.join(app.static_folder, 'data', 'seed_image.jpg')
+            static_file_path = os.path.join(
+                app.static_folder, 'data', 'seed_image.jpg')
             with open(static_file_path, 'rb') as f:
                 seed_image_data = f.read()
         else:
-            s3_path = seed_image_url.split('/proxy-image?url=https://' + bucket_name + '.s3.amazonaws.com/')[-1]
-            s3_client = boto3.client('s3',
+            s3_path = seed_image_url.split(
+                '/proxy-image?url=https://' + bucket_name + '.s3.amazonaws.com/')[-1]
+            s3_client = boto3.client(
+                's3',
                 aws_access_key_id=AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=AWS_SECRET_ACCESS_KEY
-            )
+                aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
             response = s3_client.get_object(Bucket=bucket_name, Key=s3_path)
             seed_image_data = response['Body'].read()
 
@@ -220,10 +224,10 @@ def generate_image_endpoint():
         # save images to bytes
         seed_bytes = BytesIO()
         mask_bytes = BytesIO()
-        
+
         seed_image.save(seed_bytes, format='PNG')
         mask_image.save(mask_bytes, format='PNG')
-        
+
         seed_bytes.seek(0)
         mask_bytes.seek(0)
 
@@ -244,7 +248,7 @@ def generate_image_endpoint():
         # download generated image
         image_response = requests.get(image_url)
         if image_response.status_code != 200:
-            raise Exception(f"Failed to download generated image: {image_response.status_code}")
+            raise Exception(f"Failed to download generated image: {image_response.status_code}")  # noqa: E501
 
         # generate unique ID and S3 path
         image_id = str(uuid.uuid4())
@@ -254,9 +258,9 @@ def generate_image_endpoint():
 
         # upload to S3
         s3_client = boto3.client('s3',
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY
-        )
+                                 aws_access_key_id=AWS_ACCESS_KEY_ID,
+                                 aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+                                 )
         s3_client.put_object(
             Bucket=bucket_name,
             Key=s3_path,
@@ -275,7 +279,7 @@ def generate_image_endpoint():
             'day': today,
             'created_at': created_at
         }), 200
-        
+
     except openai.OpenAIError as e:
         logging.error(f"OpenAI API error: {e}")
         return jsonify({'error': str(e)}), 500
@@ -284,7 +288,7 @@ def generate_image_endpoint():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/track-user', methods=['POST'])
+@ app.route('/track-user', methods=['POST'])
 def track_user():
     logging.info("Endpoint /track-user was hit")
     data = request.get_json()
@@ -325,7 +329,7 @@ def track_user():
             db_conn.close()
 
 
-@app.route('/insert-image', methods=['POST'])
+@ app.route('/insert-image', methods=['POST'])
 def insert_image():
     logging.info("Endpoint /insert-image was hit")
     data = request.get_json()
@@ -388,7 +392,7 @@ def insert_image():
             db_conn.close()
 
 
-@app.route('/get-images', methods=['GET'])
+@ app.route('/get-images', methods=['GET'])
 def get_images():
     logging.info("Endpoint /get-images was hit")
     day = request.args.get('day')
@@ -428,7 +432,7 @@ def get_images():
             db_conn.close()
 
 
-@app.route('/vote-image', methods=['POST'])
+@ app.route('/vote-image', methods=['POST'])
 def vote_image():
     data = request.get_json()
     image_id = data.get('image_id')
@@ -482,7 +486,7 @@ def vote_image():
             db_conn.close()
 
 
-@app.route('/proxy-image')
+@ app.route('/proxy-image')
 def proxy_image():
     image_url = request.args.get('url')
     if not image_url:
@@ -519,38 +523,7 @@ def proxy_image():
         return 'Error fetching image', 500
 
 
-@app.route('/track-visit', methods=['POST'])
-def track_visit():
-    try:
-        db_conn = get_db_connection()
-        cursor = db_conn.cursor()
-
-        # Get today's date
-        today = datetime.now().strftime('%Y-%m-%d')
-        logging.info(f"Tracking visit for date: {today}")
-
-        # Increment total_participants for the current day
-        cursor.execute("""
-            UPDATE Day SET total_participants = total_participants + 1
-            WHERE date = %s
-        """, (today,))
-        db_conn.commit()
-
-        logging.info("Total participants incremented successfully")
-        return jsonify({'message': 'Participant tracked successfully'}), 200
-
-    except Exception as e:
-        logging.error(f"Error tracking participant: {e}", exc_info=True)
-        return jsonify({'error': 'Failed to track participant'}), 500
-
-    finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'db_conn' in locals():
-            db_conn.close()
-
-
-@app.route('/update-vote-count', methods=['POST'])
+@ app.route('/update-vote-count', methods=['POST'])
 def update_vote_count():
     data = request.get_json()
     # +1 for upvote/downvote, -1 for deselect
@@ -582,6 +555,48 @@ def update_vote_count():
     except Exception as e:
         logging.error(f"Error updating vote count: {e}", exc_info=True)
         return jsonify({'error': 'Failed to update vote count'}), 500
+
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'db_conn' in locals():
+            db_conn.close()
+
+
+@app.route('/increment-participant', methods=['POST'])
+def increment_participant():
+    data = request.get_json()
+    user_id = data.get('user_id')
+
+    if not user_id:
+        return jsonify({'error': 'User ID is required'}), 400
+
+    try:
+        db_conn = get_db_connection()
+        cursor = db_conn.cursor()
+
+        # Check if the user has generated at least one image
+        cursor.execute("""
+            SELECT COUNT(*) FROM Image WHERE creator_id = %s
+        """, (user_id,))
+        image_count = cursor.fetchone()[0]
+
+        if image_count > 0:
+            # Increment participant count
+            today = datetime.now().strftime('%Y-%m-%d')
+            cursor.execute("""
+                UPDATE Day SET total_participants = total_participants + 1 WHERE date = %s
+            """, (today,))
+            db_conn.commit()
+            return jsonify(
+                {'message': 'Participant incremented successfully'}), 200
+        else:
+            return jsonify(
+                {'message': 'User has not generated any images'}), 400
+
+    except Exception as e:
+        logging.error(f"Error incrementing participant: {e}")
+        return jsonify({'error': 'Failed to increment participant'}), 500
 
     finally:
         if 'cursor' in locals():
