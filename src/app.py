@@ -400,6 +400,10 @@ def get_images():
 
     if not day:
         return jsonify({'message': 'Day is required'}), 400
+    
+    date_obj = datetime.strptime(day, "%m/%d/%Y, %I:%M:%S %p")
+    day = date_obj.strftime("%Y-%m-%d")
+    logging.info(f"Day in get-images endpoint: {day}") # should be in YYYY-MM-DD format
 
     try:
         db_conn = get_db_connection()
@@ -407,11 +411,12 @@ def get_images():
 
         logging.info("Database successfully connected")
 
-        # query for images for the given day, limited to 10
+        # query for images for the given day
         cursor.execute("""
             SELECT image_id, s3_path, prompt_text, upvotes, downvotes
             FROM Image
             WHERE day = %s
+            ORDER BY created_at DESC
         """, (day,))
 
         images = cursor.fetchall()

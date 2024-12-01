@@ -19,7 +19,8 @@
         Finish
     </button>
     <script>
-        const currentDate = new Date().toISOString().split('T')[0]; // today's date in YYYY-MM-DD format
+        const currentDate = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+        console.log('Current date:', currentDate);
         const imageContainer = document.getElementById('imageContainer');
         let userVotes = JSON.parse(localStorage.getItem('userVotes')) || {}; // persist votes across sessions
 
