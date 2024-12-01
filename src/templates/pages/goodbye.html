@@ -11,46 +11,61 @@
         <div id="thank-you-message">
             <h1>Thank You for Participating!</h1>
             <h3>Your contribution is appreciated.</h3>
-            <h3></h3>
             <h3>We value your input and hope you enjoyed generating and voting on images.</h3>
             <h3>If you encountered any issues or have suggestions, please generate a github issue <a href="https://github.com/Jasefig/pixelspatchwork/issues/new/choose" target="_blank" rel="noopener noreferrer">here.</a></h3>
-            <div style="text-align: center; margin-top: 2rem;">
-                <button type="submit" onclick="redirectToHome()">Return to Home</button>
-            </div>
+            <button 
+                id="submit-button-home"
+                type="button"
+            >
+                Return to Home
+            </button>
         </div>
     </div>
     <script>
-        function redirectToHome() {
-            window.location.href = '/';
-        }
+        async function handleParticipantCount() {
+            const createdAt = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
 
-        try {
-            // Call the backend endpoint to increment participant count
-            // participation only counts if user completed entire HIT
-            const response = await fetch('/increment-participant', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    user_id: localStorage.getItem('user_id'),
-                    created_at: createdAt
-                }) // Send the user_id and date
-            });
+            try {
+                const response = await fetch('/increment-participant', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        user_id: localStorage.getItem('user_id'),
+                        created_at: createdAt
+                    })
+                });
 
-            const data = await response.json();
-            if (!response.ok) {
-                console.error('Error incrementing participant count:', data.error);
-                alert(data.error || 'Failed to increment participant count.');
-            } else {
-                console.log('Participant count incremented successfully:', data.message);
+                const data = await response.json();
+                if (!response.ok) {
+                    console.error('Error incrementing participant count:', data.error);
+                    alert(data.error || 'Failed to increment participant count.');
+                } else {
+                    console.log('Participant count incremented successfully:', data.message);
+                }
+            } catch (error) {
+                console.error('Error incrementing participant count:', error);
+                alert('An error occurred while incrementing the participant count.');
             }
-        } catch (error) {
-            console.error('Error incrementing participant count:', error);
-            alert('An error occurred while incrementing the participant count.');
         }
 
-        localStorage.clear();
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const success = await handleParticipantCount();
+                if (success) {
+                    localStorage.clear();
+                }
+            } catch (error) {
+                console.error('Error in initialization:', error);
+            }
+        
+            document.getElementById('submit-button-home').addEventListener('click', async () => {
+                window.location.href = '/';
+                localStorage.clear(); // still clear local storage
+            });
+        });
+
     </script>
 </body>
 </html>

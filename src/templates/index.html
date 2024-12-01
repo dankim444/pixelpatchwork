@@ -57,14 +57,12 @@
             <li><strong><a href="mailto:johnmaj@seas.upenn.edu">johnmaj@seas.upenn.edu</a> (John Majernik)</strong></li>
         </ul>
         <hr>
-        <form action="{{ url_for('generate') }}" method="get">
-            <button
-                type="submit"
-                style="display: block; margin: 2rem auto;"
-            >
-                Begin
-            </button>
-        </form>
+        <button
+            id="begin-button"
+            type="button"
+        >
+            Begin
+        </button>
     </div>
 </body>
 <script>
@@ -101,7 +99,12 @@
         }
     }
 
-    // Call the function when the page loads
-    document.addEventListener('DOMContentLoaded', initializeUserTracking);
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeUserTracking();
+        
+        document.getElementById('begin-button').addEventListener('click', () => {
+            window.location.href = '/generate';
+        });
+    });
 </script>
 </html>

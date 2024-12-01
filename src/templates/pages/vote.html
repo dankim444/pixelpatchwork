@@ -12,9 +12,12 @@
         <h3>These are all images generated from you and other users today.</h3>
         <div id="imageContainer" class="image-grid"></div>
     </div>
-    <div style="text-align: center; margin-top: 2rem;">
-        <button type="submit" onclick="redirectToThankYou()">Finish</button>
-    </div>
+    <button 
+        id="finish-button"
+        type="button"
+    >
+        Finish
+    </button>
     <script>
         const currentDate = new Date().toISOString().split('T')[0]; // today's date in YYYY-MM-DD format
         const imageContainer = document.getElementById('imageContainer');
@@ -174,12 +177,14 @@
             imageContainer.innerHTML = `<div class="message">${message}</div>`;
         }
 
-        function redirectToThankYou() {
-            window.location.href = '/goodbye';
-        }
-
         // fetch images on page load
-        document.addEventListener("DOMContentLoaded", fetchImages);
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchImages();
+        
+            document.getElementById('finish-button').addEventListener('click', () => {
+                window.location.href = '/goodbye';
+            });
+        });
     </script>
 </body>
 </html>
