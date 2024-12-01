@@ -412,7 +412,6 @@ def get_images():
             SELECT image_id, s3_path, prompt_text, upvotes, downvotes
             FROM Image
             WHERE day = %s
-            LIMIT 10
         """, (day,))
 
         images = cursor.fetchall()
