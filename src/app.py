@@ -370,7 +370,7 @@ def insert_image():
             ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (image_id, s3_path, prompt_text, created_at, creator_id, day, upvotes, downvotes, flags))
 
-        # update the Day record with the image_id
+        # Update the seed_image_id in the Day table if it's NULL 
         cursor.execute("""
             UPDATE Day
             SET seed_image_id = %s
@@ -439,15 +439,14 @@ def vote_image():
     current_vote = data.get('current_vote')  # -1, 0, +1
     new_vote = data.get('new_vote')  # -1, 0, +1
 
-    if not image_id or current_vote not in [-1,
-                                            0, 1] or new_vote not in [-1, 0, 1]:
+    if not image_id or current_vote not in [-1, 0, 1] or new_vote not in [-1, 0, 1]:
         return jsonify({'error': 'Invalid image ID or vote values'}), 400
 
     try:
         db_conn = get_db_connection()
         cursor = db_conn.cursor()
 
-        # calculate the changes in upvotes and downvotes
+        # Calculate the changes in upvotes and downvotes
         upvote_change = 0
         downvote_change = 0
 
@@ -465,15 +464,38 @@ def vote_image():
         elif current_vote == -1 and new_vote == 1:
             downvote_change = -1
             upvote_change = 1
-        # else no change
 
-        # ensure votes don't go negative
+        # Update votes for the image
         cursor.execute(
             "UPDATE Image SET upvotes = GREATEST(0, upvotes + %s), downvotes = GREATEST(0, downvotes + %s) WHERE image_id = %s",
             (upvote_change, downvote_change, image_id)
         )
-        db_conn.commit()
 
+        # Get the day for this image
+        cursor.execute(
+            "SELECT day FROM Image WHERE image_id = %s", (image_id,))
+        day_result = cursor.fetchone()
+        if day_result:
+            day = day_result[0]
+
+            # Find the image with the highest upvotes for this day
+            cursor.execute("""
+                SELECT image_id FROM Image 
+                WHERE day = %s 
+                ORDER BY upvotes DESC, downvotes ASC, created_at ASC 
+                LIMIT 1
+            """, (day,))
+            highest_voted = cursor.fetchone()
+
+            if highest_voted:
+                # Update the Day table with the highest voted image
+                cursor.execute("""
+                    UPDATE Day 
+                    SET seed_image_id = %s 
+                    WHERE date = %s
+                """, (highest_voted[0], day))
+
+        db_conn.commit()
         return jsonify({'message': 'Vote recorded successfully'}), 200
 
     except Exception as e:
