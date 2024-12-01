@@ -225,7 +225,7 @@
                         prompt_text: prompt,
                         creator_id: localStorage.getItem('user_id'),
                         day: data.day,
-                        created_at: createdAt,
+                        created_at: data.created_at,
                         upvotes: 0,
                         downvotes: 0,
                         flags: 0,
@@ -271,12 +271,16 @@
 
             try {
                 // Call the backend endpoint to increment participant count
+                // participation only counts if user submits at least one image and moves to voting section
                 const response = await fetch('/increment-participant', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ user_id: localStorage.getItem('user_id') }) // Send the user_id
+                    body: JSON.stringify({ 
+                        user_id: localStorage.getItem('user_id'),
+                        created_at: createdAt
+                    }) // Send the user_id and date
                 });
 
                 const data = await response.json();

@@ -333,22 +333,22 @@ def insert_image():
     logging.info("Endpoint /insert-image was hit")
     data = request.get_json()
 
+    image_id = data.get('image_id')
+    s3_path = data.get('s3_path')
+    prompt_text = data.get('prompt_text')
+    creator_id = data.get('creator_id')
+    day = data.get('day')
+    created_at = data.get('created_at')
+    upvotes = data.get('upvotes', 0)
+    downvotes = data.get('downvotes', 0)
+    flags = data.get('flags', 0)
+
+    logging.info(f'image_id: {image_id}')
+    logging.info(f's3_path: {s3_path}')
+    logging.info(f'creator_id: {creator_id}')
+    logging.info(f'day: {day}')
+
     try:
-        image_id = data.get('image_id')
-        s3_path = data.get('s3_path')
-        prompt_text = data.get('prompt_text')
-        creator_id = data.get('creator_id')
-        day = data.get('day')
-        created_at = data.get('created_at')
-        upvotes = data.get('upvotes', 0)
-        downvotes = data.get('downvotes', 0)
-        flags = data.get('flags', 0)
-
-        logging.info(f'image_id: {image_id}')
-        logging.info(f's3_path: {s3_path}')
-        logging.info(f'creator_id: {creator_id}')
-        logging.info(f'day: {day}')
-
         db_conn = get_db_connection()
         cursor = db_conn.cursor()
 
@@ -566,6 +566,11 @@ def update_vote_count():
 def increment_participant():
     data = request.get_json()
     user_id = data.get('user_id')
+    created_at = data.get('created_at')
+
+    # extract correct dates for database
+    date_obj = datetime.strptime(created_at, "%m/%d/%Y, %I:%M:%S %p")
+    today = date_obj.strftime("%m/%d/%Y")
 
     if not user_id:
         return jsonify({'error': 'User ID is required'}), 400
@@ -582,7 +587,6 @@ def increment_participant():
 
         if image_count > 0:
             # Increment participant count
-            today = datetime.now().strftime('%Y-%m-%d')
             cursor.execute("""
                 UPDATE Day SET total_participants = total_participants + 1 WHERE date = %s
             """, (today,))
