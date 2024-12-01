@@ -269,32 +269,6 @@
                 return;
             }
 
-            try {
-                // Call the backend endpoint to increment participant count
-                // participation only counts if user submits at least one image and moves to voting section
-                const response = await fetch('/increment-participant', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        user_id: localStorage.getItem('user_id'),
-                        created_at: createdAt
-                    }) // Send the user_id and date
-                });
-
-                const data = await response.json();
-                if (!response.ok) {
-                    console.error('Error incrementing participant count:', data.error);
-                    alert(data.error || 'Failed to increment participant count.');
-                } else {
-                    console.log('Participant count incremented successfully:', data.message);
-                }
-            } catch (error) {
-                console.error('Error incrementing participant count:', error);
-                alert('An error occurred while incrementing the participant count.');
-            }
-
             // Redirect to the next page
             window.location.href = '/vote';
         });
