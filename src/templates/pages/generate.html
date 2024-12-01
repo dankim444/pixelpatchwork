@@ -54,6 +54,7 @@
     </div>
     <script>
         const createdAt = new Date().toLocaleString('en-US', { timeZone: 'America/New_York' });
+        console.log('Current date:', createdAt);
 
         let currentImage = {
             image_id: null,
@@ -206,7 +207,8 @@
                     body: JSON.stringify({
                         prompt,
                         mask: maskDataUrl,
-                        seedImage: absoluteSeedImageUrl
+                        seedImage: absoluteSeedImageUrl,
+                        createdAt: createdAt
                     })
                 });
 
@@ -261,38 +263,41 @@
         });
 
         // submit image
-        // submit image
-document.getElementById('submit-button').addEventListener('click', async () => {
-    if (!currentImage.image_id || !currentImage.s3_path) {
-        alert('Please generate an image before submitting.');
-        return;
-    }
+        document.getElementById('submit-button').addEventListener('click', async () => {
+            if (!currentImage.image_id || !currentImage.s3_path) {
+                alert('Please generate an image before submitting.');
+                return;
+            }
 
-    try {
-        // Call the backend endpoint to increment participant count
-        const response = await fetch('/increment-participant', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ user_id: localStorage.getItem('user_id') }) // Send the user_id
+            try {
+                // Call the backend endpoint to increment participant count
+                // participation only counts if user submits at least one image and moves to voting section
+                const response = await fetch('/increment-participant', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        user_id: localStorage.getItem('user_id'),
+                        created_at: createdAt
+                    }) // Send the user_id and date
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    console.error('Error incrementing participant count:', data.error);
+                    alert(data.error || 'Failed to increment participant count.');
+                } else {
+                    console.log('Participant count incremented successfully:', data.message);
+                }
+            } catch (error) {
+                console.error('Error incrementing participant count:', error);
+                alert('An error occurred while incrementing the participant count.');
+            }
+
+            // Redirect to the next page
+            window.location.href = '/vote';
         });
-
-        const data = await response.json();
-        if (!response.ok) {
-            console.error('Error incrementing participant count:', data.error);
-            alert(data.error || 'Failed to increment participant count.');
-        } else {
-            console.log('Participant count incremented successfully:', data.message);
-        }
-    } catch (error) {
-        console.error('Error incrementing participant count:', error);
-        alert('An error occurred while incrementing the participant count.');
-    }
-
-    // Redirect to the next page
-    window.location.href = '/vote';
-});
     </script>
 </body>
 </html>
