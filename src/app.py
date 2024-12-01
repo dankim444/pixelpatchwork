@@ -182,6 +182,13 @@ def generate_image_endpoint():
     prompt = data.get('prompt')
     mask_data_url = data.get('mask')
     seed_image_url = data.get('seedImage')
+    # format example: 11/30/2024, 11:29:07 PM
+    created_at = data.get('createdAt')
+
+    # extract correct dates for database
+    date_obj = datetime.strptime(created_at, "%m/%d/%Y, %I:%M:%S %p")
+    formatted_created_at = date_obj.strftime("%m/%d/%Y %H:%M:%S")
+    today = date_obj.strftime("%m/%d/%Y")
 
     if not all([prompt, mask_data_url, seed_image_url]):
         return jsonify({'error': 'Missing required parameters'}), 400
@@ -215,12 +222,6 @@ def generate_image_endpoint():
         mask_image = process_mask_for_dalle(mask_data_url)
         mask_image = mask_image.resize((512, 512))
 
-        # for debugging - save the images to see what they look like
-        # debug = False
-        # if debug:
-        #     seed_image.save('debug_seed.png')
-        #     mask_image.save('debug_mask.png')
-
         # save images to bytes
         seed_bytes = BytesIO()
         mask_bytes = BytesIO()
@@ -252,8 +253,6 @@ def generate_image_endpoint():
 
         # generate unique ID and S3 path
         image_id = str(uuid.uuid4())
-        created_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        today = datetime.now().strftime('%Y-%m-%d')
         s3_path = f'daily-submissions/{today}/{image_id}.png'
 
         # upload to S3
@@ -277,7 +276,7 @@ def generate_image_endpoint():
             'imageUrl': full_image_url,
             'image_id': image_id,
             'day': today,
-            'created_at': created_at
+            'created_at': formatted_created_at
         }), 200
 
     except openai.OpenAIError as e:
