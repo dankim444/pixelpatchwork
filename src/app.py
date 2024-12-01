@@ -289,7 +289,7 @@ def generate_image_endpoint():
         return jsonify({'error': str(e)}), 500
 
 
-@ app.route('/track-user', methods=['POST'])
+@app.route('/track-user', methods=['POST'])
 def track_user():
     logging.info("Endpoint /track-user was hit")
     data = request.get_json()
@@ -330,7 +330,7 @@ def track_user():
             db_conn.close()
 
 
-@ app.route('/insert-image', methods=['POST'])
+@app.route('/insert-image', methods=['POST'])
 def insert_image():
     logging.info("Endpoint /insert-image was hit")
     data = request.get_json()
@@ -393,7 +393,7 @@ def insert_image():
             db_conn.close()
 
 
-@ app.route('/get-images', methods=['GET'])
+@app.route('/get-images', methods=['GET'])
 def get_images():
     logging.info("Endpoint /get-images was hit")
     day = request.args.get('day')
@@ -433,7 +433,7 @@ def get_images():
             db_conn.close()
 
 
-@ app.route('/vote-image', methods=['POST'])
+@app.route('/vote-image', methods=['POST'])
 def vote_image():
     data = request.get_json()
     image_id = data.get('image_id')
@@ -487,7 +487,7 @@ def vote_image():
             db_conn.close()
 
 
-@ app.route('/proxy-image')
+@app.route('/proxy-image')
 def proxy_image():
     image_url = request.args.get('url')
     if not image_url:
@@ -524,7 +524,7 @@ def proxy_image():
         return 'Error fetching image', 500
 
 
-@ app.route('/update-vote-count', methods=['POST'])
+@app.route('/update-vote-count', methods=['POST'])
 def update_vote_count():
     data = request.get_json()
     # +1 for upvote/downvote, -1 for deselect
