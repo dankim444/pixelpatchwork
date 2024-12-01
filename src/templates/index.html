@@ -75,29 +75,8 @@
 
         if (isNewUser) {
             userId = crypto.randomUUID();
-            
-            try {
-                // Track the visit only for new users
-                const visitResponse = await fetch('/track-visit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId })
-                });
-
-                if (!visitResponse.ok) {
-                    const data = await visitResponse.json();
-                    console.error(`Error tracking visit: ${data.error}`);
-                    return; // Exit if visit tracking fails
-                }
-
-                // If visit tracking succeeds, store user info
-                localStorage.setItem('user_id', userId);
-                localStorage.setItem('created_at', createdAt);
-                console.log('New user visit tracked successfully');
-            } catch (error) {
-                console.error('Failed to track visit:', error);
-                return;
-            }
+            localStorage.setItem('user_id', userId);
+            localStorage.setItem('created_at', createdAt);
         }
 
         // Always ensure user is tracked in the User table
@@ -106,8 +85,8 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    user_id: userId, 
-                    created_at: createdAt 
+                    user_id: userId,
+                    created_at: createdAt
                 })
             });
 
