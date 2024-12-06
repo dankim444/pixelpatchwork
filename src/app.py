@@ -69,6 +69,7 @@ def get_seed_image():
         cursor = db_conn.cursor(dictionary=True)
 
         today = datetime.now().date()
+        logging.info('Today date: ' + str(today))
 
         # check if there are any previous days with images
         cursor.execute("""
@@ -81,6 +82,7 @@ def get_seed_image():
 
         if day_row:
             previous_day = day_row['day']
+            logging.info('previous day date: ' + str(previous_day))
             # find the image with the highest upvotes for that day
             cursor.execute("""
                 SELECT s3_path FROM Image
@@ -95,6 +97,7 @@ def get_seed_image():
                 # issue
                 seed_image_url = (
                     f"/proxy-image?url=https://{bucket_name}.s3.amazonaws.com/{s3_path}")
+                logging.info(f"Seed image URL: {seed_image_url}")
                 return seed_image_url
 
         # if no previous images or error, return default seed image
