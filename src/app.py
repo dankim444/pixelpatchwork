@@ -639,5 +639,32 @@ def increment_participant():
             db_conn.close()
 
 
+@app.route('/get-history')
+def get_history():
+    try:
+        db_conn = get_db_connection()
+        cursor = db_conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT d.date, i.s3_path
+            FROM Day d
+            JOIN Image i ON d.seed_image_id = i.image_id
+            WHERE d.seed_image_id IS NOT NULL
+            ORDER BY d.date DESC
+        """)
+
+        history = cursor.fetchall()
+        return jsonify({'history': history}), 200
+
+    except Exception as e:
+        logging.error(f"Error fetching history: {e}")
+        return jsonify({'error': 'Failed to fetch history'}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'db_conn' in locals():
+            db_conn.close()
+
+
 if __name__ == '__main__':
     app.run(debug=True)
