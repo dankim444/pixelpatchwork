@@ -178,7 +178,9 @@
                     `;
     
                     const date = document.createElement('p');
-                    date.textContent = `Winner - ${item.date}`;
+                    const dateStr = item.date;
+                    const parts = dateStr.split(' '); 
+                    date.textContent = `Winner - ${parts[2]}/${parts[1]}/${parts[3]}`;
                     date.style.cssText = `
                         margin: 5px 0;
                         color: #666;
