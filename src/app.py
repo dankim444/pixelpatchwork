@@ -124,8 +124,7 @@ def get_seed_image():
     try:
         # use the proxy URL instead of direct S3 URL - addresses CORS
         # issue
-        seed_image_url = (
-            f"/proxy-image?url=https://{bucket_name}.s3.amazonaws.com/seed_image.jpg")
+        seed_image_url = 'https://us-east-1.console.aws.amazon.com/s3/object/pixelspatchwork?region=us-east-1&bucketType=general&prefix=daily-submissions/seed_image.jpg'
             
         logging.info(f"Seed image URL: {seed_image_url}")
         return seed_image_url
