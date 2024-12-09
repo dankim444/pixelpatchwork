@@ -62,72 +62,43 @@ def get_db_connection():
     )
 
 
-# def get_seed_image():
-#     """Get the seed image URL for the current day or default seed image."""
-#     try:
-#         db_conn = get_db_connection()
-#         cursor = db_conn.cursor(dictionary=True)
-
-#         today = datetime.now().date()
-#         logging.info('Today date: ' + str(today))
-
-#         # check if there are any previous days with images
-#         cursor.execute("""
-#             SELECT DISTINCT day FROM Image
-#             WHERE day < %s
-#             ORDER BY day DESC
-#             LIMIT 1
-#         """, (today,))
-#         day_row = cursor.fetchone()
-
-#         if day_row:
-#             previous_day = day_row['day']
-#             logging.info('previous day date: ' + str(previous_day))
-#             # find the image with the highest upvotes for that day
-#             cursor.execute("""
-#                 SELECT s3_path FROM Image
-#                 WHERE day = %s
-#                 ORDER BY upvotes DESC, downvotes ASC, created_at ASC
-#                 LIMIT 1
-#             """, (previous_day,))
-#             image_row = cursor.fetchone()
-#             if image_row:
-#                 s3_path = image_row['s3_path']
-#                 # use the proxy URL instead of direct S3 URL - addresses CORS
-#                 # issue
-#                 seed_image_url = (
-#                     f"/proxy-image?url=https://{bucket_name}.s3.amazonaws.com/{s3_path}")
-#                 logging.info(f"Seed image URL: {seed_image_url}")
-#                 return seed_image_url
-
-#         # if no previous images or error, return default seed image
-#         seed_image_url = url_for(
-#             'static', filename='data/seed_image.jpg', _external=True)
-#         return seed_image_url
-
-#     except Exception as e:
-#         logging.error(f"Error fetching seed image: {e}")
-#         # return default seed image in case of error
-#         seed_image_url = url_for(
-#             'static', filename='data/seed_image.jpg', _external=True)
-#         return seed_image_url
-
-#     finally:
-#         if 'cursor' in locals():
-#             cursor.close()
-#         if 'db_conn' in locals():
-#             db_conn.close()
-
-
 def get_seed_image():
     """Get the seed image URL for the current day or default seed image."""
     try:
-        # use the proxy URL instead of direct S3 URL - addresses CORS
-        # issue
-        seed_image_url = 'https://us-east-1.console.aws.amazon.com/s3/object/pixelspatchwork?region=us-east-1&bucketType=general&prefix=daily-submissions/seed_image.jpg'
-            
-        logging.info(f"Seed image URL: {seed_image_url}")
-        return seed_image_url
+        db_conn = get_db_connection()
+        cursor = db_conn.cursor(dictionary=True)
+
+        today = datetime.now().date()
+        logging.info('Today date: ' + str(today))
+
+        # check if there are any previous days with images
+        cursor.execute("""
+            SELECT DISTINCT day FROM Image
+            WHERE day < %s
+            ORDER BY day DESC
+            LIMIT 1
+        """, (today,))
+        day_row = cursor.fetchone()
+
+        if day_row:
+            previous_day = day_row['day']
+            logging.info('previous day date: ' + str(previous_day))
+            # find the image with the highest upvotes for that day
+            cursor.execute("""
+                SELECT s3_path FROM Image
+                WHERE day = %s
+                ORDER BY upvotes DESC, downvotes ASC, created_at ASC
+                LIMIT 1
+            """, (previous_day,))
+            image_row = cursor.fetchone()
+            if image_row:
+                s3_path = image_row['s3_path']
+                # use the proxy URL instead of direct S3 URL - addresses CORS
+                # issue
+                seed_image_url = (
+                    f"/proxy-image?url=https://{bucket_name}.s3.amazonaws.com/{s3_path}")
+                logging.info(f"Seed image URL: {seed_image_url}")
+                return seed_image_url
 
         # if no previous images or error, return default seed image
         seed_image_url = url_for(
@@ -146,7 +117,6 @@ def get_seed_image():
             cursor.close()
         if 'db_conn' in locals():
             db_conn.close()
-
 
 
 
