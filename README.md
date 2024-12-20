@@ -34,7 +34,7 @@ The purpose of this project is to:
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone git@github.com:dankim444/pixelpatchwork.git
    cd PixelPatchwork
 2. Create a python virtual environment:
     ```bash
